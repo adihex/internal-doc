@@ -38,7 +38,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://example.invalid/internal-doc.git"
+    "url": "git+https://github.com/adihex/internal-doc.git"
+  },
+  "homepage": "https://github.com/adihex/internal-doc#readme",
+  "bugs": {
+    "url": "https://github.com/adihex/internal-doc/issues"
   },
   "keywords": [
     "agent-skill",

@@ -4,7 +4,7 @@ A small typed Node.js CLI and portable Agent Skill for validated, deterministic,
 
 ## Install
 
-Requires Node.js 20+. The intended public repository is not yet assigned; the package metadata therefore uses an explicit non-resolving placeholder. For a clean checkout:
+Requires Node.js 20+. For a clean checkout:
 
 ```sh
 npm ci
@@ -24,7 +24,7 @@ Identical valid JSON and theme input produce byte-identical HTML. The compiler p
 
 ## Agent use
 
-Install or expose the top-level `generating-internal-docs/` directory in an Agent Skills-compatible harness, then follow `SKILL.md`. Agents author bounded semantic JSON, validate, render with a named theme, inspect the result, and revise the JSON rather than disposable HTML. The package includes the skill's progressive references, schema, themes, fixture, scripts, tests, and license.
+Install the published Amp skill with `amp skill add --global @adihex/generating-internal-docs`, or expose the top-level `generating-internal-docs/` directory in another Agent Skills-compatible harness. Then follow `SKILL.md`. Agents author bounded semantic JSON, validate, render with a named theme, inspect the result, and revise the JSON rather than disposable HTML. The package includes the skill's progressive references, schema, themes, fixture, scripts, tests, and license.
 
 ## Schema and theme extension
 
