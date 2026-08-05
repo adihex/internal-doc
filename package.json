@@ -1,0 +1,48 @@
+{
+  "name": "internal-doc",
+  "version": "1.0.0",
+  "description": "Deterministic standalone internal-document renderer",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "internal-doc": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "generating-internal-docs"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "ajv": "8.17.1",
+    "markdown-it": "14.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.32.0",
+    "@types/markdown-it": "14.1.2",
+    "@types/node": "24.1.0",
+    "eslint": "9.32.0",
+    "prettier": "3.6.2",
+    "typescript": "5.8.3",
+    "typescript-eslint": "8.38.0",
+    "vitest": "3.2.4"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://example.invalid/internal-doc.git"
+  },
+  "keywords": [
+    "agent-skill",
+    "documentation",
+    "static-html"
+  ]
+}

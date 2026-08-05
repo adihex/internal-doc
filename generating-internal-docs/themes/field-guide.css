@@ -1,0 +1,23 @@
+:root {
+  --ink: #243126;
+  --paper: #f7f3df;
+  --accent: #356b3d;
+  --muted: #e4e0c9;
+}
+body {
+  font:
+    16px/1.6 Georgia,
+    serif;
+  color: var(--ink);
+  background: var(--paper);
+  margin: auto;
+  max-width: 72rem;
+  padding: 2rem;
+}
+a {
+  color: var(--accent);
+}
+h1,
+h2 {
+  font-family: system-ui, sans-serif;
+}

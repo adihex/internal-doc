@@ -1,0 +1,25 @@
+:root {
+  --ink: #15191d;
+  --paper: #fff;
+  --accent: #005ea8;
+  --muted: #e8edf2;
+}
+body {
+  font:
+    15px/1.55 Arial,
+    sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  margin: auto;
+  max-width: 76rem;
+  padding: 2rem;
+}
+a {
+  color: var(--accent);
+}
+h1 {
+  border-bottom: 3px solid var(--ink);
+}
+h2 {
+  border-bottom: 1px solid #999;
+}
