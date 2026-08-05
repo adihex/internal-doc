@@ -73,6 +73,15 @@ describe("render", () => {
       expect(inspectHtml(html)).toMatchObject({ standalone: true, theme });
       expect(html).not.toMatch(/<script src=|<link[^>]+href=/);
     });
+  it("renders keyboard-usable document navigation from semantic sections", () => {
+    const html = renderDocument(doc, "technical-report");
+    expect(html).toContain('<nav aria-label="Document sections">');
+    expect(html).toContain('<a href="#overview">Overview</a>');
+    expect(html).toContain('<main id="content">');
+    expect(html).toContain(
+      '<a class="skip-link" href="#content">Skip to content</a>',
+    );
+  });
   it("escapes injection in markdown, code, URL and embedded JSON", () => {
     const x = structuredClone(doc);
     x.metadata.title = "</script><script>bad()</script>";

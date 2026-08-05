@@ -133,7 +133,10 @@ export function renderDocument(value: unknown, theme: Theme): string {
     `${root}generating-internal-docs/themes/${theme}.css`,
     "utf8",
   );
-  const common = `*{box-sizing:border-box}body{overflow-wrap:break-word}img,svg,video,canvas{max-width:100%}:focus-visible{outline:3px solid var(--accent);outline-offset:2px}pre{overflow:auto;max-width:100%;padding:1rem;background:var(--muted)}.table-wrap{max-width:100%;overflow-x:auto}table{border-collapse:collapse;width:100%}th,td{border:1px solid #777;padding:.5rem;text-align:left}.callout,.task{padding:1rem;margin:1rem 0;background:var(--muted)}@media(max-width:600px){body{padding:1rem}th,td{min-width:8rem}}@media print{button{display:none}body{max-width:none;padding:0;color:#000;background:#fff}a{color:#000}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}`;
+  const common = `*{box-sizing:border-box}html{scroll-behavior:smooth}body{overflow-wrap:break-word}img,svg,video,canvas{max-width:100%}:focus-visible{outline:3px solid var(--accent);outline-offset:2px}.skip-link{position:absolute;left:.75rem;top:-5rem;z-index:10;padding:.75rem 1rem;background:var(--ink);color:var(--paper)}.skip-link:focus{top:.75rem}nav ul{display:flex;flex-wrap:wrap;gap:.5rem 1rem;padding:0;list-style:none}nav a{display:inline-block;padding:.25rem 0}pre{overflow:auto;max-width:100%;padding:1rem;background:var(--muted)}.table-wrap{max-width:100%;overflow-x:auto}table{border-collapse:collapse;width:100%}th,td{border:1px solid #777;padding:.5rem;text-align:left}.callout,.task{padding:1rem;margin:1rem 0;background:var(--muted)}@media(max-width:600px){body{padding:1rem}nav ul{display:block}nav li+li{margin-top:.35rem}th,td{min-width:8rem}}@media print{button,.skip-link,nav{display:none}body{max-width:none;padding:0;color:#000;background:#fff}a{color:#000}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}`;
+  const navigation = sections
+    .map((s) => `<li><a href="#${esc(s.id)}">${esc(s.title)}</a></li>`)
+    .join("");
   const content = sections
     .map(
       (s) =>
@@ -141,7 +144,7 @@ export function renderDocument(value: unknown, theme: Theme): string {
     )
     .join("");
   const provenance = { schema: d.schema, version: m.version, kind: m.kind };
-  return `<!doctype html><html lang="en" data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="generator" content="internal-doc 1.0.0"><title>${esc(m.title)}</title><style>${css}${common}</style></head><body><header><h1>${esc(m.title)}</h1><p>${esc(m.summary)}</p><small>Version ${esc(m.version)} · ${esc(m.kind)}</small></header><main>${content}</main><script type="application/json" id="internal-doc-provenance">${JSON.stringify(provenance).replace(/</g, "\\u003c")}</script><script>(()=>{document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>navigator.clipboard.writeText(b.parentElement.querySelector('code').textContent)))})()</script></body></html>`;
+  return `<!doctype html><html lang="en" data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="generator" content="internal-doc 1.0.0"><title>${esc(m.title)}</title><style>${css}${common}</style></head><body><a class="skip-link" href="#content">Skip to content</a><header><h1>${esc(m.title)}</h1><p>${esc(m.summary)}</p><small>Version ${esc(m.version)} · ${esc(m.kind)}</small><nav aria-label="Document sections"><ul>${navigation}</ul></nav></header><main id="content">${content}</main><script type="application/json" id="internal-doc-provenance">${JSON.stringify(provenance).replace(/</g, "\\u003c")}</script><script>(()=>{document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>navigator.clipboard.writeText(b.parentElement.querySelector('code').textContent)))})()</script></body></html>`;
 }
 export function inspectHtml(html: string) {
   const theme = html.match(/data-theme="([^"]+)"/)?.[1] ?? null;

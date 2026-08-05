@@ -13,13 +13,15 @@ Produce portable internal documentation without external runtime resources.
 
 ## Workflow
 
-1. Read `references/authoring.md` for content and privacy rules.
-2. Copy `fixtures/every-block.json` and replace its generic content.
-3. Keep `schema` set to `internal-doc.document.v1`; follow `schemas/internal-doc.document.v1.schema.json`.
-4. Validate with `internal-doc validate document.json` (or run `scripts/validate.mjs document.json` from an installed repository).
-5. Render with `internal-doc render document.json --theme plain --output document.html`.
-6. Inspect with `internal-doc inspect document.html --json` and require `standalone: true`.
-7. Review headings, links, print preview, narrow-screen tables, and all copy controls before publication.
+1. Choose the narrowest document kind and the `internal-doc.document.v1` schema. Read only `references/authoring.md`, the schema, and the block/theme reference needed for the task.
+2. Author bounded semantic JSON. Copy `fixtures/every-block.json` only when broad block coverage helps. Markdown is allowed only in `prose.markdown`; never hand-author wrapper HTML, CSS, or JavaScript.
+3. Validate with `internal-doc validate document.json` (or `scripts/validate.mjs document.json` from an installed package). Repair schema and semantic diagnostics before continuing.
+4. Render with an existing theme: `internal-doc render document.json --theme plain --output document.html`.
+5. Inspect with `internal-doc inspect document.html --json`; require `standalone: true`. When a local browser exists, also review desktop, a true mobile viewport, focus order, overflow, copy controls, and print preview.
+6. Revise the semantic JSON, never generated HTML, then repeat validation and rendering.
+7. Deliver both canonical JSON and disposable standalone HTML, plus any browser-gate limitation.
+
+When valid source already exists, use this deterministic local-only lane directly. No agent or network access is needed for validation, rendering, inspection, or repeat builds.
 
 ## Theme Selection
 
@@ -41,5 +43,6 @@ Include only publication-safe metadata. Never include prompts, hidden instructio
 - Commands and code declare a language when known and use `copy` only when useful.
 - Diagrams remain legible as text and tables remain usable at mobile widths.
 - Generated HTML contains no external resources and is deterministic for identical input and theme.
+- Source stays within the task's content budget; progressive references avoid loading irrelevant contracts.
 
 For block details and examples, read `references/blocks.md`. For CLI behavior and exit codes, read `references/cli.md`.

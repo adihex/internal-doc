@@ -2,17 +2,37 @@
 
 A small typed Node.js CLI and portable Agent Skill for validated, deterministic, standalone internal-document HTML. It is generic and contains no organization-specific content.
 
-## Install and use
+## Install
 
-Requires Node.js 20+. `npm ci && npm run build`, then:
+Requires Node.js 20+. The intended public repository is not yet assigned; the package metadata therefore uses an explicit non-resolving placeholder. For a clean checkout:
 
 ```sh
-node dist/cli.js validate generating-internal-docs/fixtures/every-block.json
-node dist/cli.js render generating-internal-docs/fixtures/every-block.json --theme field-guide --output guide.html
-node dist/cli.js inspect guide.html --json
+npm ci
+npm run build
+npm link
 ```
 
-The top-level `generating-internal-docs/` directory is a self-contained Agent Skill with progressive references, canonical JSON Schema, themes, script, and fixture. Package files include the skill for portable publication.
+## Deterministic use
+
+```sh
+internal-doc validate generating-internal-docs/fixtures/every-block.json
+internal-doc render generating-internal-docs/fixtures/every-block.json --theme field-guide --output guide.html
+internal-doc inspect guide.html --json
+```
+
+Identical valid JSON and theme input produce byte-identical HTML. The compiler performs no network access and generated HTML embeds its CSS, JavaScript, and sanitized provenance.
+
+## Agent use
+
+Install or expose the top-level `generating-internal-docs/` directory in an Agent Skills-compatible harness, then follow `SKILL.md`. Agents author bounded semantic JSON, validate, render with a named theme, inspect the result, and revise the JSON rather than disposable HTML. The package includes the skill's progressive references, schema, themes, fixture, scripts, tests, and license.
+
+## Schema and theme extension
+
+`internal-doc.document.v1` is the canonical compiler boundary. Add a block only by extending the JSON Schema, typed renderer switch, validation, every-block fixture, escaping tests, and all-theme render tests together. Themes are trusted packaged CSS selected from the validated `plain`, `field-guide`, or `technical-report` registry; document input cannot provide CSS, templates, render commands, or shell strings.
+
+## Safety and limitations
+
+Rich Markdown is accepted only in typed prose fields with raw HTML disabled and an explicit URL policy. Images and external resource loads are rejected. `inspect` is a deterministic structural gate for compiler output, not a general-purpose HTML security scanner. Browser responsive, accessibility, overflow, and print review is an additional gate when a local browser is available; it does not replace schema and standalone validation. The compiler does not render arbitrary plugins, execute project commands, or fetch network assets.
 
 ## Development
 
