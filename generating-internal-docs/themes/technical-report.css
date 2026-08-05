@@ -1,8 +1,20 @@
 :root {
+  --print-theme: technical-report;
   --ink: #15191d;
   --paper: #fff;
   --accent: #005ea8;
   --muted: #e8edf2;
+}
+@media print {
+  body {
+    font-size: 10pt;
+  }
+  section {
+    break-before: page;
+  }
+  section:first-child {
+    break-before: auto;
+  }
 }
 body {
   font:

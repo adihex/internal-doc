@@ -1,8 +1,17 @@
 :root {
+  --print-theme: field-guide;
   --ink: #243126;
   --paper: #f7f3df;
   --accent: #356b3d;
   --muted: #e4e0c9;
+}
+@media print {
+  h2 {
+    break-after: avoid;
+  }
+  .callout {
+    border: 1px solid #777;
+  }
 }
 body {
   font:

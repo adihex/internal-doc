@@ -23,13 +23,47 @@ describe("validation", () => {
     y.sections[0].blocks.push({ type: "prose", markdown: "[bad](#missing)" });
     expect(validateDocument(y).join()).toMatch(/Broken local reference/);
   });
-  it("rejects external resources and bad heading semantics", () => {
+  it("resolves forward fragment references after globally collecting IDs", () => {
+    const x = structuredClone(doc);
+    x.sections[0].blocks.unshift({
+      type: "prose",
+      markdown: "[later](#later)",
+    });
+    x.sections[0].blocks.push({
+      type: "callout",
+      id: "later",
+      style: "note",
+      text: "Here",
+    });
+    expect(validateDocument(x)).toEqual([]);
+  });
+  it("uses Markdown tokens for images and heading semantics", () => {
     const x = structuredClone(doc);
     x.sections[0].blocks.push({
       type: "prose",
-      markdown: "![x](https://evil/x.png)\n\n# Wrong",
+      markdown: "![local](asset.png)",
     });
-    expect(validateDocument(x).join()).toMatch(/External resource|heading/);
+    expect(validateDocument(x).join()).toMatch(/Images are not allowed/);
+    for (const markdown of ["Title\n=====", "### Fine\n\n##### Skip"]) {
+      const y = structuredClone(doc);
+      y.sections[0].blocks.push({ type: "prose", markdown });
+      expect(validateDocument(y).join()).toMatch(/heading/i);
+    }
+    const z = structuredClone(doc);
+    z.sections[0].blocks.push({
+      type: "prose",
+      markdown: "```md\n# code only\n```",
+    });
+    expect(validateDocument(z)).toEqual([]);
+  });
+  it("requires every table row to match its columns", () => {
+    const x = structuredClone(doc);
+    x.sections[0].blocks.push({
+      type: "table",
+      columns: ["a", "b"],
+      rows: [["one"]],
+    });
+    expect(validateDocument(x).join()).toMatch(/row width/i);
   });
 });
 describe("render", () => {
@@ -51,7 +85,46 @@ describe("render", () => {
     ];
     const html = renderDocument(x, "plain");
     expect(html).not.toContain("<script>bad()");
-    expect(html).not.toContain("javascript:bad()");
+    expect(html).not.toContain('href="javascript:bad()"');
     expect(html).toContain("&lt;/code&gt;");
+  });
+  it("applies an explicit safe hyperlink policy", () => {
+    const x = structuredClone(doc);
+    x.sections[0].blocks = [
+      {
+        type: "prose",
+        markdown:
+          "[web](https://example.com) [mail](mailto:a@example.com) [bad](data:text/html,x)",
+      },
+    ];
+    const html = renderDocument(x, "plain");
+    expect(html).toContain('href="https://example.com"');
+    expect(html).toContain('href="mailto:a@example.com"');
+    expect(html).not.toContain('href="data:');
+  });
+  it("detects broad external resources and requires compiler provenance", () => {
+    const html = renderDocument(doc, "plain");
+    for (const external of [
+      '<iframe src="https://evil.test"></iframe>',
+      '<video poster="//evil.test/x"></video>',
+      '<style>@import "x.css"</style>',
+      "<style>x{background:url(https://evil.test/x)}</style>",
+    ])
+      expect(inspectHtml(html + external).standalone).toBe(false);
+    expect(
+      inspectHtml(html.replace('name="generator"', 'name="other"')).standalone,
+    ).toBe(false);
+    expect(
+      inspectHtml(html.replace('id="internal-doc-provenance"', 'id="other"'))
+        .standalone,
+    ).toBe(false);
+  });
+  it("includes overflow safeguards and theme-owned print contracts", () => {
+    for (const theme of ["plain", "field-guide", "technical-report"] as const) {
+      const html = renderDocument(doc, theme);
+      expect(html).toMatch(/overflow-wrap:break-word/);
+      expect(html).toMatch(/@media print/);
+      expect(html).toMatch(new RegExp(`--print-theme:\\s*${theme}`));
+    }
   });
 });

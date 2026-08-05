@@ -24,6 +24,11 @@ const esc = (v: unknown) =>
         c
       ]!,
   );
+const md = new MarkdownIt({ html: false, linkify: false });
+/** Links may navigate locally, over HTTP(S), or open email. All other schemes are inert. */
+const safeLink = (url: string) =>
+  !/^[a-z][a-z0-9+.-]*:/i.test(url) || /^(?:https?:|mailto:)/i.test(url);
+md.validateLink = safeLink;
 export function validateDocument(value: unknown): string[] {
   const errors: string[] = [];
   if (!check(value))
@@ -36,6 +41,7 @@ export function validateDocument(value: unknown): string[] {
   const d = value as Obj,
     sections = Array.isArray(d.sections) ? (d.sections as Obj[]) : [];
   const ids = new Set<string>();
+  // This pass must finish before links are checked so forward references work.
   for (const s of sections) {
     for (const x of [
       s,
@@ -45,29 +51,56 @@ export function validateDocument(value: unknown): string[] {
         if (ids.has(x.id)) errors.push(`duplicate ID: ${x.id}`);
         ids.add(x.id);
       }
+  }
+  for (const s of sections) {
+    let previousHeading = 2;
     for (const b of Array.isArray(s.blocks) ? (s.blocks as Obj[]) : []) {
       if (typeof b.markdown === "string") {
-        for (const m of b.markdown.matchAll(/\[[^\]]*\]\(#([^)]+)\)/g))
-          if (m[1] && !ids.has(m[1]) && !sections.some((q) => q.id === m[1]))
-            errors.push(`Broken local reference: #${m[1]}`);
-        if (/!\[[^\]]*\]\((?:https?:)?\/\//i.test(b.markdown))
-          errors.push("External resource is not allowed");
-        if (/^#\s/m.test(b.markdown))
-          errors.push(
-            "Semantic heading error: prose must not contain level-1 headings",
-          );
+        const tokens = md.parse(b.markdown, {});
+        for (const token of tokens) {
+          if (token.type === "heading_open") {
+            const level = Number(token.tag.slice(1));
+            if (level === 1)
+              errors.push(
+                "Semantic heading error: prose must not contain level-1 headings",
+              );
+            else if (level > previousHeading + 1)
+              errors.push(
+                `Semantic heading skip: h${previousHeading} to h${level}`,
+              );
+            previousHeading = level;
+          }
+          for (const child of token.children ?? []) {
+            if (child.type === "image")
+              errors.push("Images are not allowed in prose");
+            if (child.type === "link_open") {
+              const href = child.attrGet("href");
+              if (href?.startsWith("#") && !ids.has(href.slice(1)))
+                errors.push(`Broken local reference: ${href}`);
+            }
+          }
+        }
+      }
+      if (
+        (b.type === "table" || b.type === "matrix") &&
+        Array.isArray(b.columns)
+      ) {
+        for (const [index, row] of (Array.isArray(b.rows)
+          ? b.rows
+          : []
+        ).entries())
+          if (!Array.isArray(row) || row.length !== b.columns.length)
+            errors.push(`Table row width mismatch at row ${index + 1}`);
       }
     }
   }
   return errors;
 }
-const md = new MarkdownIt({ html: false, linkify: false });
-md.validateLink = (url) => /^(?:#|\/|\.\/|\.\.\/|mailto:)/.test(url);
 function block(b: Obj): string {
   const id = typeof b.id === "string" ? ` id="${esc(b.id)}"` : "";
   switch (b.type) {
     case "prose":
-      return `<div${id} class="prose">${md.render(String(b.markdown).replace(/javascript\s*:/gi, ""))}</div>`;
+      return `<div${id} class="prose">${md.render(String(b.markdown))}</div>`;
     case "callout":
       return `<aside${id} class="callout ${esc(b.style)}"><strong>${esc(b.style)}</strong> ${esc(b.text)}</aside>`;
     case "code":
@@ -100,7 +133,7 @@ export function renderDocument(value: unknown, theme: Theme): string {
     `${root}generating-internal-docs/themes/${theme}.css`,
     "utf8",
   );
-  const common = `*{box-sizing:border-box}:focus-visible{outline:3px solid var(--accent);outline-offset:2px}pre{overflow:auto;padding:1rem;background:var(--muted)}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%}th,td{border:1px solid #777;padding:.5rem;text-align:left}.callout,.task{padding:1rem;margin:1rem 0;background:var(--muted)}@media(max-width:600px){body{padding:1rem}th,td{min-width:8rem}}@media print{button{display:none}body{max-width:none;padding:0;color:#000;background:#fff}a{color:#000}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}`;
+  const common = `*{box-sizing:border-box}body{overflow-wrap:break-word}img,svg,video,canvas{max-width:100%}:focus-visible{outline:3px solid var(--accent);outline-offset:2px}pre{overflow:auto;max-width:100%;padding:1rem;background:var(--muted)}.table-wrap{max-width:100%;overflow-x:auto}table{border-collapse:collapse;width:100%}th,td{border:1px solid #777;padding:.5rem;text-align:left}.callout,.task{padding:1rem;margin:1rem 0;background:var(--muted)}@media(max-width:600px){body{padding:1rem}th,td{min-width:8rem}}@media print{button{display:none}body{max-width:none;padding:0;color:#000;background:#fff}a{color:#000}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}`;
   const content = sections
     .map(
       (s) =>
@@ -112,11 +145,32 @@ export function renderDocument(value: unknown, theme: Theme): string {
 }
 export function inspectHtml(html: string) {
   const theme = html.match(/data-theme="([^"]+)"/)?.[1] ?? null;
+  const provenanceText = html.match(
+    /<script\b[^>]*type="application\/json"[^>]*id="internal-doc-provenance"[^>]*>([^<]*)<\/script>/i,
+  )?.[1];
+  let provenance = false;
+  try {
+    const parsed = JSON.parse(provenanceText ?? "");
+    provenance =
+      parsed?.schema === "internal-doc.document.v1" &&
+      typeof parsed.version === "string" &&
+      typeof parsed.kind === "string";
+  } catch {
+    provenance = false;
+  }
+  const externalAttribute =
+    /<(?:script|img|iframe|frame|embed|audio|video|source|track|input)\b[^>]*\bsrc\s*=\s*["']?\s*(?:https?:)?\/\/|<link\b[^>]*\bhref\s*=\s*["']?\s*(?:https?:)?\/\/|<(?:object)\b[^>]*\bdata\s*=\s*["']?\s*(?:https?:)?\/\/|\b(?:poster|background)\s*=\s*["']?\s*(?:https?:)?\/\//i;
+  const cssResource = /@import\b|url\s*\(\s*["']?\s*(?!data:|#)/i;
   return {
     theme,
     standalone:
       /^<!doctype html>/i.test(html) &&
-      !/<(?:script[^>]+src|link[^>]+href|img[^>]+src)\s*=/i.test(html),
+      /<meta\b[^>]*name="generator"[^>]*content="internal-doc [^"]+"/i.test(
+        html,
+      ) &&
+      provenance &&
+      !externalAttribute.test(html) &&
+      !cssResource.test(html),
     title: html.match(/<title>([^<]*)<\/title>/)?.[1] ?? null,
     bytes: Buffer.byteLength(html),
   };

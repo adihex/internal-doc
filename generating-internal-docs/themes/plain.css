@@ -1,8 +1,14 @@
 :root {
+  --print-theme: plain;
   --ink: #17202a;
   --paper: #fff;
   --accent: #2457a6;
   --muted: #eef2f6;
+}
+@media print {
+  header {
+    border-bottom: 1px solid #777;
+  }
 }
 body {
   font:
