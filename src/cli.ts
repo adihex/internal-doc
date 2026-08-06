@@ -13,22 +13,33 @@ const fail = (message: string, code: 1 | 2): never => {
   console.error(message);
   process.exit(code);
 };
-type Parsed = { theme: Theme; output: string | undefined; json: boolean };
+type Parsed = {
+  theme: Theme;
+  output: string | undefined;
+  json: boolean;
+  artifact: boolean;
+};
 function flags(command: string, values: string[]): Parsed {
   const allowed =
     command === "render"
-      ? new Set(["--theme", "--output"])
+      ? new Set(["--theme", "--output", "--artifact"])
       : command === "inspect"
         ? new Set(["--json"])
         : new Set<string>();
   const seen = new Set<string>();
-  const parsed: Parsed = { theme: "plain", output: undefined, json: false };
+  const parsed: Parsed = {
+    theme: "plain",
+    output: undefined,
+    json: false,
+    artifact: false,
+  };
   for (let i = 0; i < values.length; i++) {
     const flag = values[i]!;
     if (!allowed.has(flag) || seen.has(flag))
       fail(`Invalid option: ${flag}`, 2);
     seen.add(flag);
     if (flag === "--json") parsed.json = true;
+    else if (flag === "--artifact") parsed.artifact = true;
     else {
       const value = values[++i];
       if (!value || value.startsWith("--")) fail(`${flag} requires a value`, 2);
@@ -62,11 +73,12 @@ try {
 }
 if (selectedCommand === "inspect") {
   const info = inspectHtml(source);
-  if (!info.standalone) fail(`${input}: invalid or non-standalone HTML`, 1);
+  if (!info.mode)
+    fail(`${input}: invalid HTML (not standalone or artifact-fragment)`, 1);
   console.log(
     options.json
       ? JSON.stringify(info)
-      : `theme: ${info.theme}\nstandalone: ${info.standalone}\nbytes: ${info.bytes}`,
+      : `theme: ${info.theme}\nmode: ${info.mode}\nbytes: ${info.bytes}`,
   );
 } else {
   let document: unknown;
@@ -80,7 +92,14 @@ if (selectedCommand === "inspect") {
   if (selectedCommand === "validate") console.log(`${input}: valid`);
   else {
     try {
-      writeFileSync(options.output!, renderDocument(document, options.theme));
+      writeFileSync(
+        options.output!,
+        renderDocument(
+          document,
+          options.theme,
+          options.artifact ? "artifact" : "standalone",
+        ),
+      );
     } catch (error) {
       fail(error instanceof Error ? error.message : String(error), 2);
     }

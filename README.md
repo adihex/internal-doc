@@ -17,10 +17,11 @@ npm link
 ```sh
 internal-doc validate generating-internal-docs/fixtures/every-block.json
 internal-doc render generating-internal-docs/fixtures/every-block.json --theme field-guide --output guide.html
+internal-doc render generating-internal-docs/fixtures/every-block.json --theme technical-report --artifact --output fragment.html
 internal-doc inspect guide.html --json
 ```
 
-Identical valid JSON and theme input produce byte-identical HTML. The compiler performs no network access and generated HTML embeds its CSS, JavaScript, and sanitized provenance.
+Identical valid JSON and theme input produce byte-identical HTML in both standalone and artifact modes. The compiler performs no network access and generated HTML embeds its CSS, JavaScript, and sanitized provenance. Artifact fragments (`--artifact`) omit the page skeleton and inline dual-theme CSS for direct publishing as claude.ai Artifacts.
 
 ## Agent use
 

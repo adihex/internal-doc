@@ -76,8 +76,52 @@ describe("CLI", () => {
       ["validate", fixture, "--json"],
       ["render", fixture, "--output"],
       ["render", fixture, "--output", output, "--output", output],
+      ["validate", fixture, "--artifact"],
+      ["inspect", output, "--artifact"],
     ])
       expect(spawnSync(process.execPath, [cli, ...args]).status).toBe(2);
+  });
+  it("renders artifact mode and inspects it as artifact-fragment", () => {
+    const d = mkdtempSync(join(tmpdir(), "idoc-"));
+    const output = join(d, "artifact.html");
+    execFileSync(process.execPath, [
+      cli,
+      "render",
+      fixture,
+      "--theme",
+      "field-guide",
+      "--artifact",
+      "--output",
+      output,
+    ]);
+    const html = readFileSync(output, "utf8");
+    expect(html).not.toMatch(/<!doctype|<html[\s>]/i);
+    expect(html).toMatch(/^<title>/);
+    const info = JSON.parse(
+      execFileSync(process.execPath, [cli, "inspect", output, "--json"], {
+        encoding: "utf8",
+      }),
+    );
+    expect(info.mode).toBe("artifact-fragment");
+    expect(info.standalone).toBe(false);
+    expect(info.theme).toBe("field-guide");
+  });
+  it("artifact output is deterministic across two renders", () => {
+    const d = mkdtempSync(join(tmpdir(), "idoc-"));
+    const a = join(d, "a.html"),
+      b = join(d, "b.html");
+    for (const out of [a, b])
+      execFileSync(process.execPath, [
+        cli,
+        "render",
+        fixture,
+        "--theme",
+        "technical-report",
+        "--artifact",
+        "--output",
+        out,
+      ]);
+    expect(readFileSync(a, "utf8")).toBe(readFileSync(b, "utf8"));
   });
   it("classifies invalid JSON/content as 1 and filesystem failures as 2", () => {
     const d = mkdtempSync(join(tmpdir(), "idoc-"));

@@ -1,0 +1,20 @@
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #d8dde3;
+    --paper: #181c22;
+    --accent: #6a9eff;
+    --muted: #252b33;
+  }
+}
+:root[data-theme="light"] {
+  --ink: #17202a;
+  --paper: #fff;
+  --accent: #2457a6;
+  --muted: #eef2f6;
+}
+:root[data-theme="dark"] {
+  --ink: #d8dde3;
+  --paper: #181c22;
+  --accent: #6a9eff;
+  --muted: #252b33;
+}
