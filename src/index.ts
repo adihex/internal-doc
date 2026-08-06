@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 export const themes = ["plain", "field-guide", "technical-report"] as const;
 export type Theme = (typeof themes)[number];
+export type RenderMode = "standalone" | "artifact";
 type Obj = Record<string, unknown>;
 const root = fileURLToPath(new URL("../", import.meta.url));
 const schema = JSON.parse(
@@ -122,7 +123,11 @@ function block(b: Obj): string {
       throw new Error(`Unsupported block type: ${String(b.type)}`);
   }
 }
-export function renderDocument(value: unknown, theme: Theme): string {
+export function renderDocument(
+  value: unknown,
+  theme: Theme,
+  mode: RenderMode = "standalone",
+): string {
   if (!themes.includes(theme)) throw new Error(`Unsupported theme: ${theme}`);
   const errors = validateDocument(value);
   if (errors.length) throw new Error(errors.join("\n"));
@@ -133,7 +138,6 @@ export function renderDocument(value: unknown, theme: Theme): string {
     `${root}generating-internal-docs/themes/${theme}.css`,
     "utf8",
   );
-  const common = `*{box-sizing:border-box}html{scroll-behavior:smooth}body{overflow-wrap:break-word}img,svg,video,canvas{max-width:100%}:focus-visible{outline:3px solid var(--accent);outline-offset:2px}.skip-link{position:absolute;left:.75rem;top:-5rem;z-index:10;padding:.75rem 1rem;background:var(--ink);color:var(--paper)}.skip-link:focus{top:.75rem}nav ul{display:flex;flex-wrap:wrap;gap:.5rem 1rem;padding:0;list-style:none}nav a{display:inline-block;padding:.25rem 0}pre{overflow:auto;max-width:100%;padding:1rem;background:var(--muted)}.table-wrap{max-width:100%;overflow-x:auto}table{border-collapse:collapse;width:100%}th,td{border:1px solid #777;padding:.5rem;text-align:left}.callout,.task{padding:1rem;margin:1rem 0;background:var(--muted)}@media(max-width:600px){body{padding:1rem}nav ul{display:block}nav li+li{margin-top:.35rem}th,td{min-width:8rem}}@media print{button,.skip-link,nav{display:none}body{max-width:none;padding:0;color:#000;background:#fff}a{color:#000}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}`;
   const navigation = sections
     .map((s) => `<li><a href="#${esc(s.id)}">${esc(s.title)}</a></li>`)
     .join("");
@@ -144,10 +148,23 @@ export function renderDocument(value: unknown, theme: Theme): string {
     )
     .join("");
   const provenance = { schema: d.schema, version: m.version, kind: m.kind };
-  return `<!doctype html><html lang="en" data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="generator" content="internal-doc 1.0.0"><title>${esc(m.title)}</title><style>${css}${common}</style></head><body><a class="skip-link" href="#content">Skip to content</a><header><h1>${esc(m.title)}</h1><p>${esc(m.summary)}</p><small>Version ${esc(m.version)} · ${esc(m.kind)}</small><nav aria-label="Document sections"><ul>${navigation}</ul></nav></header><main id="content">${content}</main><script type="application/json" id="internal-doc-provenance">${JSON.stringify(provenance).replace(/</g, "\\u003c")}</script><script>(()=>{document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>navigator.clipboard.writeText(b.parentElement.querySelector('code').textContent)))})()</script></body></html>`;
+  const provenanceJson = JSON.stringify(provenance).replace(/</g, "\\u003c");
+  if (mode === "artifact") {
+    const dark = readFileSync(
+      `${root}generating-internal-docs/themes/${theme}.dark.css`,
+      "utf8",
+    );
+    const artifactCommon = `*{box-sizing:border-box}body{overflow-wrap:break-word}img,svg,video,canvas{max-width:100%}:focus-visible{outline:3px solid var(--accent);outline-offset:2px}nav ul{display:flex;flex-wrap:wrap;gap:.5rem 1rem;padding:0;list-style:none}nav a{display:inline-block;padding:.25rem 0}pre{overflow-x:auto;max-width:100%;padding:1rem;background:var(--muted)}.code{max-width:100%}.table-wrap{max-width:100%;overflow-x:auto}table{border-collapse:collapse;width:100%}th,td,.scorecard,.checklist{font-variant-numeric:tabular-nums}th,td{border:1px solid #777;padding:.5rem;text-align:left}.callout,.task{padding:1rem;margin:1rem 0;background:var(--muted)}h1,h2,h3{text-wrap:balance}header{position:relative}.theme-toggle{position:absolute;top:.5rem;right:.5rem;padding:.35rem .6rem;border:1px solid #777;border-radius:.2rem;background:var(--muted);color:var(--ink);cursor:pointer;font-size:1rem;line-height:1}@media(max-width:600px){body{padding:1rem}nav ul{display:block}nav li+li{margin-top:.35rem}th,td{min-width:8rem}}@media print{button,.theme-toggle,nav{display:none}body{max-width:none;padding:0;color:#000;background:#fff}a{color:#000}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}`;
+    return `<title>${esc(m.title)}</title><style>${css}${dark}${artifactCommon}</style><header><button type="button" class="theme-toggle" aria-label="Toggle color theme">◐</button><h1>${esc(m.title)}</h1><p>${esc(m.summary)}</p><small>Version ${esc(m.version)} · ${esc(m.kind)}</small><nav aria-label="Document sections"><ul>${navigation}</ul></nav></header><main id="content">${content}</main><script type="application/json" id="internal-doc-provenance">${provenanceJson}</script><script>(()=>{var r=document.documentElement,b=document.querySelector('.theme-toggle');if(b)b.addEventListener('click',function(){var c=r.getAttribute('data-theme'),d=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;r.setAttribute('data-theme',c==='dark'||(c!=='light'&&d)?'light':'dark')});document.querySelectorAll('.copy').forEach(function(b){b.addEventListener('click',function(){navigator.clipboard.writeText(b.parentElement.querySelector('code').textContent)})})})()</script>`;
+  }
+  const common = `*{box-sizing:border-box}html{scroll-behavior:smooth}body{overflow-wrap:break-word}img,svg,video,canvas{max-width:100%}:focus-visible{outline:3px solid var(--accent);outline-offset:2px}.skip-link{position:absolute;left:.75rem;top:-5rem;z-index:10;padding:.75rem 1rem;background:var(--ink);color:var(--paper)}.skip-link:focus{top:.75rem}nav ul{display:flex;flex-wrap:wrap;gap:.5rem 1rem;padding:0;list-style:none}nav a{display:inline-block;padding:.25rem 0}pre{overflow:auto;max-width:100%;padding:1rem;background:var(--muted)}.table-wrap{max-width:100%;overflow-x:auto}table{border-collapse:collapse;width:100%}th,td{border:1px solid #777;padding:.5rem;text-align:left}.callout,.task{padding:1rem;margin:1rem 0;background:var(--muted)}@media(max-width:600px){body{padding:1rem}nav ul{display:block}nav li+li{margin-top:.35rem}th,td{min-width:8rem}}@media print{button,.skip-link,nav{display:none}body{max-width:none;padding:0;color:#000;background:#fff}a{color:#000}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}`;
+  return `<!doctype html><html lang="en" data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="generator" content="internal-doc 1.0.0"><title>${esc(m.title)}</title><style>${css}${common}</style></head><body><a class="skip-link" href="#content">Skip to content</a><header><h1>${esc(m.title)}</h1><p>${esc(m.summary)}</p><small>Version ${esc(m.version)} · ${esc(m.kind)}</small><nav aria-label="Document sections"><ul>${navigation}</ul></nav></header><main id="content">${content}</main><script type="application/json" id="internal-doc-provenance">${provenanceJson}</script><script>(()=>{document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>navigator.clipboard.writeText(b.parentElement.querySelector('code').textContent)))})()</script></body></html>`;
 }
 export function inspectHtml(html: string) {
-  const theme = html.match(/data-theme="([^"]+)"/)?.[1] ?? null;
+  const theme =
+    html.match(/<html\b[^>]*\bdata-theme="([^"]+)"/i)?.[1] ??
+    html.match(/--print-theme:\s*([a-z-]+)/i)?.[1] ??
+    null;
   const provenanceText = html.match(
     /<script\b[^>]*type="application\/json"[^>]*id="internal-doc-provenance"[^>]*>([^<]*)<\/script>/i,
   )?.[1];
@@ -164,16 +181,28 @@ export function inspectHtml(html: string) {
   const externalAttribute =
     /<(?:script|img|iframe|frame|embed|audio|video|source|track|input)\b[^>]*\bsrc\s*=\s*["']?\s*(?:https?:)?\/\/|<link\b[^>]*\bhref\s*=\s*["']?\s*(?:https?:)?\/\/|<(?:object)\b[^>]*\bdata\s*=\s*["']?\s*(?:https?:)?\/\/|\b(?:poster|background)\s*=\s*["']?\s*(?:https?:)?\/\//i;
   const cssResource = /@import\b|url\s*\(\s*["']?\s*(?!data:|#)/i;
+  const hasExternal = externalAttribute.test(html) || cssResource.test(html);
+  const isStandalone =
+    /^<!doctype html>/i.test(html) &&
+    /<meta\b[^>]*name="generator"[^>]*content="internal-doc [^"]+"/i.test(
+      html,
+    ) &&
+    provenance &&
+    !hasExternal;
+  const hasWrapper = /<!doctype|<html[\s>]|<head[\s>]|<body[\s>]/i.test(html);
+  const hasTitle = /<title>[^<]*<\/title>/i.test(html);
+  const styleCount = (html.match(/<style\b[^>]*>/gi) ?? []).length;
+  const isArtifact =
+    !hasWrapper && hasTitle && styleCount === 1 && provenance && !hasExternal;
+  const mode = isStandalone
+    ? "standalone"
+    : isArtifact
+      ? "artifact-fragment"
+      : null;
   return {
     theme,
-    standalone:
-      /^<!doctype html>/i.test(html) &&
-      /<meta\b[^>]*name="generator"[^>]*content="internal-doc [^"]+"/i.test(
-        html,
-      ) &&
-      provenance &&
-      !externalAttribute.test(html) &&
-      !cssResource.test(html),
+    mode,
+    standalone: isStandalone,
     title: html.match(/<title>([^<]*)<\/title>/)?.[1] ?? null,
     bytes: Buffer.byteLength(html),
   };
