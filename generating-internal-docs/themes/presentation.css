@@ -1,0 +1,44 @@
+:root {
+  --print-theme: presentation;
+  --ink: #17202a;
+  --paper: #fff;
+  --accent: #2457a6;
+  --muted: #eef2f6;
+  --rule: #718096;
+  --secondary: #465364;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #f4f7fa;
+    --paper: #121820;
+    --accent: #8ab4ff;
+    --muted: #202a35;
+    --rule: #7d8b9b;
+    --secondary: #c2ccd7;
+  }
+}
+[data-theme="dark"] {
+  --ink: #f4f7fa;
+  --paper: #121820;
+  --accent: #8ab4ff;
+  --muted: #202a35;
+  --rule: #7d8b9b;
+  --secondary: #c2ccd7;
+}
+body {
+  font:
+    20px/1.55 system-ui,
+    sans-serif;
+  margin: auto;
+  max-width: 76rem;
+  padding: 3rem;
+}
+h1 {
+  font-size: clamp(2.8rem, 7vw, 5rem);
+}
+h2 {
+  font-size: clamp(2rem, 5vw, 3.25rem);
+}
+a {
+  color: var(--accent);
+}

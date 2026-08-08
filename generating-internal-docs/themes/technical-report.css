@@ -197,3 +197,39 @@ tbody tr:nth-child(even) {
     margin-bottom: 0.5rem;
   }
 }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #f4f7fa;
+    --paper: #121820;
+    --accent: #8ab4ff;
+    --muted: #202a35;
+    --rule: #7d8b9b;
+    --secondary: #c2ccd7;
+  }
+}
+[data-theme="dark"] {
+  --ink: #f4f7fa;
+  --paper: #121820;
+  --accent: #8ab4ff;
+  --muted: #202a35;
+  --rule: #7d8b9b;
+  --secondary: #c2ccd7;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #f4f7fa;
+    --paper: #121820;
+    --accent: #8ab4ff;
+    --muted: #202a35;
+    --rule: #7d8b9b;
+    --secondary: #c2ccd7;
+  }
+}
+[data-theme="dark"] {
+  --ink: #f4f7fa;
+  --paper: #121820;
+  --accent: #8ab4ff;
+  --muted: #202a35;
+  --rule: #7d8b9b;
+  --secondary: #c2ccd7;
+}
