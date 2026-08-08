@@ -103,11 +103,34 @@ describe("render", () => {
     expect(html).toContain('<a href="#overview">Overview</a>');
     expect(html).toContain('<main id="content">');
     expect(html).toContain('class="theme-toggle"');
+    expect(html).toContain("header{position:relative}.theme-toggle");
     expect(html).toContain('data-document-theme="technical-report"');
     expect(html).toContain("root.dataset.theme=dark()?'light':'dark'");
     expect(html).toContain(
       '<a class="skip-link" href="#content">Skip to content</a>',
     );
+  });
+  it("keeps no-TOC reports full-width with long source content", () => {
+    const x = structuredClone(doc);
+    delete x.metadata.toc;
+    x.sections = [
+      {
+        id: "overview",
+        title: "Overview",
+        blocks: [
+          {
+            type: "code",
+            language: "text",
+            code: "diagnostic-" + "x".repeat(240),
+          },
+        ],
+      },
+    ];
+    const html = renderDocument(x, "technical-report");
+    expect(html).toContain('<div class="layout layout-no-toc">');
+    expect(html).toContain(".layout.layout-no-toc main{grid-column:1 / -1}");
+    expect(html).toContain("diagnostic-" + "x".repeat(240));
+    expect(html).not.toContain('<nav class="toc"');
   });
   it("escapes injection in markdown, code, URL and embedded JSON", () => {
     const x = structuredClone(doc);
