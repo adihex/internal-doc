@@ -24,7 +24,7 @@ a {
   color: var(--accent);
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --ink: #f4f7fa;
     --paper: #121820;
     --accent: #8ab4ff;
@@ -42,7 +42,7 @@ a {
   --secondary: #c2ccd7;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --ink: #f4f7fa;
     --paper: #121820;
     --accent: #8ab4ff;

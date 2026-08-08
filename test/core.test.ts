@@ -102,6 +102,9 @@ describe("render", () => {
     expect(html).toContain('<nav aria-label="Document sections">');
     expect(html).toContain('<a href="#overview">Overview</a>');
     expect(html).toContain('<main id="content">');
+    expect(html).toContain('class="theme-toggle"');
+    expect(html).toContain('data-document-theme="technical-report"');
+    expect(html).toContain("root.dataset.theme=dark()?'light':'dark'");
     expect(html).toContain(
       '<a class="skip-link" href="#content">Skip to content</a>',
     );

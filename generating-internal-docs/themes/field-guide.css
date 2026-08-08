@@ -31,7 +31,7 @@ h2 {
   font-family: system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --ink: #f4f7fa;
     --paper: #121820;
     --accent: #8ab4ff;
@@ -49,7 +49,7 @@ h2 {
   --secondary: #c2ccd7;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --ink: #f4f7fa;
     --paper: #121820;
     --accent: #8ab4ff;
