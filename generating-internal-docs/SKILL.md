@@ -16,10 +16,10 @@ Produce portable internal documentation without external runtime resources.
 1. Choose the narrowest document kind and the `internal-doc.document.v1` schema. Read only `references/authoring.md`, the schema, and the block/theme reference needed for the task.
 2. Author bounded semantic JSON. Copy `fixtures/every-block.json` only when broad block coverage helps. Markdown is allowed only in `prose.markdown`; never hand-author wrapper HTML, CSS, or JavaScript.
 3. Validate with `internal-doc validate document.json` (or `scripts/validate.mjs document.json` from an installed package). Repair schema and semantic diagnostics before continuing.
-4. Render with an existing theme: `internal-doc render document.json --theme plain --output document.html`.
-5. Inspect with `internal-doc inspect document.html --json`; require `standalone: true`. When a local browser exists, also review desktop, a true mobile viewport, focus order, overflow, copy controls, and print preview.
+4. Render with an existing theme: `internal-doc render document.json --theme plain --output document.html`. Add `--artifact` for a claude.ai-ready fragment (see below).
+5. Inspect with `internal-doc inspect document.html --json`; require `mode: "standalone"` (or `mode: "artifact-fragment"` for artifact output). When a local browser exists, also review desktop, a true mobile viewport, focus order, overflow, copy controls, and print preview.
 6. Revise the semantic JSON, never generated HTML, then repeat validation and rendering.
-7. Deliver both canonical JSON and disposable standalone HTML, plus any browser-gate limitation.
+7. Deliver both canonical JSON and disposable HTML, plus any browser-gate limitation.
 
 When valid source already exists, use this deterministic local-only lane directly. No agent or network access is needed for validation, rendering, inspection, or repeat builds.
 
@@ -46,3 +46,14 @@ Include only publication-safe metadata. Never include prompts, hidden instructio
 - Source stays within the task's content budget; progressive references avoid loading irrelevant contracts.
 
 For block details and examples, read `references/blocks.md`. For CLI behavior and exit codes, read `references/cli.md`.
+
+## Publishing as a claude.ai Artifact
+
+Use `--artifact` to emit a fragment instead of a standalone page:
+
+```sh
+internal-doc render document.json --theme technical-report --artifact --output fragment.html
+internal-doc inspect fragment.html --json   # mode: "artifact-fragment"
+```
+
+The fragment contains no `<!doctype>`, `<html>`, `<head>`, or `<body>` tags — only a `<title>`, one inline `<style>` block with dual-theme CSS, the document content, and provenance. Paste it directly into a claude.ai Artifact. Do not hand-author HTML wrappers, CSS, or JavaScript; let the compiler produce the fragment so escaping, provenance, and determinism guarantees hold.

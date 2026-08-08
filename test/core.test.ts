@@ -164,3 +164,105 @@ describe("render", () => {
     }
   });
 });
+describe("artifact mode", () => {
+  for (const theme of ["plain", "field-guide", "technical-report"] as const)
+    it(`renders ${theme} as artifact-fragment`, () => {
+      const html = renderDocument(doc, theme, "artifact");
+      expect(inspectHtml(html)).toMatchObject({
+        mode: "artifact-fragment",
+        theme,
+        standalone: false,
+      });
+      expect(html).not.toMatch(/<!doctype|<html[\s>]|<head[\s>]|<body[\s>]/i);
+      expect(html).toMatch(/^<title>/);
+      expect((html.match(/<style\b[^>]*>/gi) ?? []).length).toBe(1);
+      expect(html).not.toMatch(/<script src=|<link[^>]+href=/);
+    });
+  it("is deterministic across two renders for every theme", () => {
+    for (const theme of ["plain", "field-guide", "technical-report"] as const) {
+      const a = renderDocument(doc, theme, "artifact");
+      const b = renderDocument(doc, theme, "artifact");
+      expect(a).toBe(b);
+    }
+  });
+  it("contains dual-theme custom properties with manual toggle override", () => {
+    for (const theme of ["plain", "field-guide", "technical-report"] as const) {
+      const html = renderDocument(doc, theme, "artifact");
+      expect(html).toContain("@media (prefers-color-scheme: dark)");
+      expect(html).toContain(':root[data-theme="light"]');
+      expect(html).toContain(':root[data-theme="dark"]');
+    }
+  });
+  it("includes responsive artifact CSS: balanced headings, tabular-nums, overflow-x", () => {
+    const html = renderDocument(doc, "plain", "artifact");
+    expect(html).toContain("text-wrap:balance");
+    expect(html).toContain("tabular-nums");
+    expect(html).toContain("overflow-x:auto");
+  });
+  it("escapes injection identically in both modes", () => {
+    const x = structuredClone(doc);
+    x.metadata.title = "</script><script>bad()</script>";
+    x.sections[0].blocks = [
+      {
+        type: "prose",
+        markdown: "<img src=x onerror=bad()> [x](javascript:bad())",
+      },
+      { type: "code", code: "</code><script>bad()</script>", language: "html" },
+    ];
+    for (const mode of ["standalone", "artifact"] as const) {
+      const html = renderDocument(x, "plain", mode);
+      expect(html).not.toContain("<script>bad()");
+      expect(html).not.toContain('href="javascript:bad()"');
+      expect(html).toContain("&lt;/code&gt;");
+    }
+  });
+  it("applies the safe hyperlink policy in artifact mode", () => {
+    const x = structuredClone(doc);
+    x.sections[0].blocks = [
+      {
+        type: "prose",
+        markdown:
+          "[web](https://example.com) [mail](mailto:a@example.com) [bad](data:text/html,x)",
+      },
+    ];
+    const html = renderDocument(x, "plain", "artifact");
+    expect(html).toContain('href="https://example.com"');
+    expect(html).toContain('href="mailto:a@example.com"');
+    expect(html).not.toContain('href="data:');
+  });
+  it("includes provenance and theme-toggle in artifact output", () => {
+    const html = renderDocument(doc, "plain", "artifact");
+    expect(html).toContain('id="internal-doc-provenance"');
+    expect(html).toContain('class="theme-toggle"');
+  });
+});
+describe("inspect classification", () => {
+  it("classifies standalone output", () => {
+    const html = renderDocument(doc, "plain");
+    expect(inspectHtml(html)).toMatchObject({ mode: "standalone" });
+  });
+  it("classifies artifact-fragment output", () => {
+    const html = renderDocument(doc, "field-guide", "artifact");
+    expect(inspectHtml(html)).toMatchObject({ mode: "artifact-fragment" });
+  });
+  it("rejects hand-written HTML that is neither", () => {
+    expect(inspectHtml("<html><body>Hi</body></html>").mode).toBeNull();
+    expect(inspectHtml("<p>just text</p>").mode).toBeNull();
+    expect(
+      inspectHtml("<title>Test</title><style>body{}</style>").mode,
+    ).toBeNull();
+  });
+  it("rejects artifact fragments with external resources", () => {
+    const html = renderDocument(doc, "plain", "artifact");
+    for (const external of [
+      '<iframe src="https://evil.test"></iframe>',
+      '<style>@import "x.css"</style>',
+      "<style>x{background:url(https://evil.test/x)}</style>",
+    ])
+      expect(inspectHtml(html + external).mode).toBeNull();
+  });
+  it("rejects artifact fragments with multiple style blocks", () => {
+    const html = renderDocument(doc, "plain", "artifact");
+    expect(inspectHtml(html + "<style>extra</style>").mode).toBeNull();
+  });
+});

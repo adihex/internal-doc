@@ -22,6 +22,7 @@ export const themeDescriptions: Record<Theme, string> = {
   presentation: "Large, screen-sharing friendly typography.",
 };
 type Obj = Record<string, unknown>;
+export type RenderMode = "standalone" | "artifact";
 export type RenderOptions = { fragment?: boolean; toc?: boolean };
 const root = fileURLToPath(new URL("../", import.meta.url));
 export const documentSchema = JSON.parse(
@@ -193,7 +194,7 @@ const common = `*{box-sizing:border-box}html{scroll-behavior:smooth}body{overflo
 export function renderDocument(
   value: unknown,
   selectedTheme?: Theme,
-  options: RenderOptions = {},
+  options: RenderOptions | RenderMode = {},
 ): string {
   const errors = validateDocument(value);
   if (errors.length) throw new Error(errors.join("\n"));
@@ -203,19 +204,18 @@ export function renderDocument(
       selectedTheme ??
       (themes.includes(m.theme as Theme) ? (m.theme as Theme) : "plain");
   if (!themes.includes(theme)) throw new Error(`Unsupported theme: ${theme}`);
+  const mode = typeof options === "string" ? options : "standalone";
+  const renderOptions = typeof options === "string" ? {} : options;
   const accent =
     typeof m.accent === "string" && /^#[0-9a-f]{6}$/i.test(m.accent)
       ? `:root{--accent:${m.accent}}`
       : "";
-  const css =
-    readFileSync(
-      `${root}generating-internal-docs/themes/${theme}.css`,
-      "utf8",
-    ) +
-    common +
-    accent;
-  const sections = d.sections as Obj[],
-    useToc = options.toc || m.toc === true;
+  const themeCss = readFileSync(
+    `${root}generating-internal-docs/themes/${theme}.css`,
+    "utf8",
+  );
+  const css = themeCss + common + accent;
+  const sections = d.sections as Obj[];
   const navigation = sections
     .map((s) => `<li><a href="#${esc(s.id)}">${esc(s.title)}</a></li>`)
     .join("");
@@ -225,23 +225,35 @@ export function renderDocument(
       return `<section id="${esc(s.id)}"><h2 class="section-title">${esc(s.title)}<a class="section-link" href="#${esc(s.id)}" aria-label="Link to ${esc(s.title)}">#</a></h2>${(s.blocks as Obj[]).map((b) => block(b, headings)).join("")}</section>`;
     })
     .join("");
-  const toc = useToc
-    ? `<nav class="toc" aria-label="Table of contents"><details open><summary>Table of contents</summary><ul>${navigation}</ul></details></nav>`
-    : "";
-  const headerNavigation = `<nav aria-label="Document sections"><ul>${navigation}</ul></nav>`;
-  const body = `<a class="skip-link" href="#content">Skip to content</a><header><button class="theme-toggle" type="button" aria-pressed="false">🌙 Dark mode</button><h1>${esc(m.title)}</h1><p>${esc(m.summary)}</p><small>Version ${esc(m.version)} · ${esc(m.kind)}</small>${headerNavigation}</header><div class="layout">${toc}<main id="content">${content}</main></div>`;
-  if (options.fragment) return `<style>${css}</style>${body}`;
   const provenance = JSON.stringify({
     schema: d.schema,
     version: m.version,
     kind: m.kind,
   }).replace(/</g, "\\u003c");
+  const headerNavigation = `<nav aria-label="Document sections"><ul>${navigation}</ul></nav>`;
+  if (mode === "artifact") {
+    const dark = ["plain", "field-guide", "technical-report"].includes(theme)
+      ? readFileSync(
+          `${root}generating-internal-docs/themes/${theme}.dark.css`,
+          "utf8",
+        )
+      : "";
+    const artifactCommon = `*{box-sizing:border-box}body{overflow-wrap:break-word;background:var(--paper);color:var(--ink)}img,svg,video,canvas{max-width:100%}:focus-visible{outline:3px solid var(--accent);outline-offset:2px}nav ul{display:flex;flex-wrap:wrap;gap:.5rem 1rem;padding:0;list-style:none}nav a{display:inline-block;padding:.25rem 0}pre{overflow-x:auto;max-width:100%;padding:1rem;background:var(--muted)}.code{max-width:100%}.table-wrap{max-width:100%;overflow-x:auto}table{border-collapse:collapse;width:100%}th,td,.scorecard,.checklist{font-variant-numeric:tabular-nums}th,td{border:1px solid var(--rule,#777);padding:.5rem;text-align:left}.callout,.task{padding:1rem;margin:1rem 0;background:var(--muted)}h1,h2,h3{text-wrap:balance}header{position:relative}.theme-toggle{position:absolute;top:.5rem;right:.5rem;padding:.35rem .6rem;border:1px solid var(--rule,#777);border-radius:.2rem;background:var(--muted);color:var(--ink);cursor:pointer;font-size:1rem;line-height:1}@media(max-width:600px){body{padding:1rem}nav ul{display:block}nav li+li{margin-top:.35rem}th,td{min-width:8rem}}@media print{button,.theme-toggle,nav{display:none}body{max-width:none;padding:0;color:#000;background:#fff}a{color:#000}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}`;
+    return `<title>${esc(m.title)}</title><style>${themeCss}${dark}${artifactCommon}${accent}</style><header><button type="button" class="theme-toggle" aria-label="Toggle color theme">◐</button><h1>${esc(m.title)}</h1><p>${esc(m.summary)}</p><small>Version ${esc(m.version)} · ${esc(m.kind)}</small>${headerNavigation}</header><main id="content">${content}</main><script type="application/json" id="internal-doc-provenance">${provenance}</script><script>(()=>{const r=document.documentElement,b=document.querySelector('.theme-toggle');if(b)b.addEventListener('click',()=>{const c=r.getAttribute('data-theme'),d=matchMedia('(prefers-color-scheme: dark)').matches;r.setAttribute('data-theme',c==='dark'||(c!=='light'&&d)?'light':'dark')});document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>navigator.clipboard.writeText(b.parentElement.querySelector('code').textContent)))})()</script>`;
+  }
+  const toc =
+    renderOptions.toc || m.toc === true
+      ? `<nav class="toc" aria-label="Table of contents"><details open><summary>Table of contents</summary><ul>${navigation}</ul></details></nav>`
+      : "";
+  const body = `<a class="skip-link" href="#content">Skip to content</a><header><button class="theme-toggle" type="button" aria-pressed="false">🌙 Dark mode</button><h1>${esc(m.title)}</h1><p>${esc(m.summary)}</p><small>Version ${esc(m.version)} · ${esc(m.kind)}</small>${headerNavigation}</header><div class="layout">${toc}<main id="content">${content}</main></div>`;
+  if (renderOptions.fragment) return `<style>${css}</style>${body}`;
   return `<!doctype html><html lang="en" data-theme="${theme}" data-document-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="generator" content="internal-doc 1.0.0"><title>${esc(m.title)}</title><style>${css}</style></head><body>${body}<script type="application/json" id="internal-doc-provenance">${provenance}</script><script>(()=>{const root=document.documentElement,button=document.querySelector('.theme-toggle'),media=matchMedia('(prefers-color-scheme: dark)'),dark=()=>root.dataset.theme==='dark'||(root.dataset.theme!=='light'&&media.matches),sync=()=>{const active=dark();button.textContent=active?'☀️ Light mode':'🌙 Dark mode';button.setAttribute('aria-pressed',String(active))};button.addEventListener('click',()=>{root.dataset.theme=dark()?'light':'dark';sync()});media.addEventListener?.('change',sync);sync();document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>{const t=b.parentElement.querySelector('code').textContent;if(navigator.clipboard)navigator.clipboard.writeText(t);else{const x=document.createElement('textarea');x.value=t;document.body.append(x);x.select();document.execCommand('copy');x.remove()}}))})()</script></body></html>`;
 }
 export function inspectHtml(html: string) {
   const theme =
     html.match(/data-document-theme="([^"]+)"/)?.[1] ??
-    html.match(/data-theme="([^"]+)"/)?.[1] ??
+    html.match(/<html\b[^>]*\bdata-theme="([^"]+)"/i)?.[1] ??
+    html.match(/--print-theme:\s*([a-z-]+)/i)?.[1] ??
     null;
   const provenanceText = html.match(
     /<script\b[^>]*type="application\/json"[^>]*id="internal-doc-provenance"[^>]*>([^<]*)<\/script>/i,
@@ -259,16 +271,24 @@ export function inspectHtml(html: string) {
   const external =
     /<(?:script|img|iframe|frame|embed|audio|video|source|track|input)\b[^>]*\bsrc\s*=\s*["']?\s*(?:https?:)?\/\/|<link\b[^>]*\bhref\s*=\s*["']?\s*(?:https?:)?\/\/|<(?:object)\b[^>]*\bdata\s*=\s*["']?\s*(?:https?:)?\/\/|\b(?:poster|background)\s*=\s*["']?\s*(?:https?:)?\/\//i;
   const cssResource = /@import\b|url\s*\(\s*["']?\s*(?!data:|#)/i;
+  const hasExternal = external.test(html) || cssResource.test(html);
+  const standalone =
+    /^<!doctype html>/i.test(html) &&
+    /<meta\b[^>]*name="generator"[^>]*content="internal-doc [^"]+"/i.test(
+      html,
+    ) &&
+    provenance &&
+    !hasExternal;
+  const artifact =
+    !/<!doctype|<html[\s>]|<head[\s>]|<body[\s>]/i.test(html) &&
+    /<title>[^<]*<\/title>/.test(html) &&
+    (html.match(/<style\b[^>]*>/gi) ?? []).length === 1 &&
+    provenance &&
+    !hasExternal;
   return {
     theme,
-    standalone:
-      /^<!doctype html>/i.test(html) &&
-      /<meta\b[^>]*name="generator"[^>]*content="internal-doc [^"]+"/i.test(
-        html,
-      ) &&
-      provenance &&
-      !external.test(html) &&
-      !cssResource.test(html),
+    mode: standalone ? "standalone" : artifact ? "artifact-fragment" : null,
+    standalone,
     title: html.match(/<title>([^<]*)<\/title>/)?.[1] ?? null,
     bytes: Buffer.byteLength(html),
     contrast: { passed: true, warnings: [] as string[] },

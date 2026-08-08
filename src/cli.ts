@@ -21,6 +21,7 @@ type Options = {
   theme: Theme | undefined;
   output: string | undefined;
   json: boolean;
+  artifact: boolean;
   fragment: boolean;
   toc: boolean;
   strict: boolean;
@@ -35,6 +36,7 @@ function flags(values: string[]): Options {
     bump: undefined,
     kind: undefined,
     json: false,
+    artifact: false,
     fragment: false,
     toc: false,
     strict: false,
@@ -42,6 +44,7 @@ function flags(values: string[]): Options {
   };
   const booleans = new Set([
     "--json",
+    "--artifact",
     "--fragment",
     "--toc",
     "--strict",
@@ -55,6 +58,7 @@ function flags(values: string[]): Options {
     if (booleans.has(flag)) {
       const key = flag.slice(2) as
         | "json"
+        | "artifact"
         | "fragment"
         | "toc"
         | "strict"
@@ -119,10 +123,13 @@ function render(file: string, options: Options) {
   if (changed) writeFileSync(file, `${JSON.stringify(doc, null, 2)}\n`);
   writeFileSync(
     options.output!,
-    renderDocument(doc, options.theme, {
-      fragment: options.fragment,
-      toc: options.toc,
-    }),
+    renderDocument(
+      doc,
+      options.theme,
+      options.artifact
+        ? "artifact"
+        : { fragment: options.fragment, toc: options.toc },
+    ),
   );
   console.log(options.output!);
 }
@@ -191,6 +198,7 @@ if (command === "themes") {
   const options = flags(rest);
   if (command === "inspect") {
     if (
+      options.artifact ||
       options.fragment ||
       options.toc ||
       options.strict ||
@@ -201,15 +209,17 @@ if (command === "themes") {
     )
       fail("Invalid option for inspect", 2);
     const info = inspectHtml(readFileSync(file!, "utf8"));
-    if (!info.standalone) fail(`${file}: invalid or non-standalone HTML`, 1);
+    if (!info.mode)
+      fail(`${file}: invalid HTML (not standalone or artifact-fragment)`, 1);
     console.log(
       options.json
         ? JSON.stringify(info)
-        : `theme: ${info.theme}\nstandalone: ${info.standalone}\nbytes: ${info.bytes}\ncontrast: passed`,
+        : `theme: ${info.theme}\nmode: ${info.mode}\nbytes: ${info.bytes}\ncontrast: passed`,
     );
   } else if (command === "validate") {
     if (
       options.json ||
+      options.artifact ||
       options.fragment ||
       options.toc ||
       options.watch ||
