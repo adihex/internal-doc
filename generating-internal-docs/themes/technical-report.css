@@ -5,6 +5,10 @@
   --accent: #005ea8;
   --muted: #e8edf2;
   --rule: #8d99a5;
+  --border: #c4ccd3;
+  --surface: #f8fafb;
+  --surface-alt: #f6f8fa;
+  --secondary: #4b5661;
   --success: #176b3a;
   --warning: #934a00;
 }
@@ -50,7 +54,7 @@ header > p {
   font-size: 1.08rem;
 }
 header small {
-  color: #4b5661;
+  color: var(--secondary);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -106,7 +110,7 @@ code {
 }
 .code pre,
 .diagram {
-  border: 1px solid #c4ccd3;
+  border: 1px solid var(--border);
   border-radius: 0.25rem;
   line-height: 1.45;
 }
@@ -135,7 +139,7 @@ code {
   text-transform: uppercase;
 }
 .task {
-  border: 1px solid #c4ccd3;
+  border: 1px solid var(--border);
   border-left: 0.35rem solid var(--accent);
 }
 .task dl {
@@ -162,7 +166,7 @@ thead {
   background: var(--ink);
 }
 tbody tr:nth-child(even) {
-  background: #f6f8fa;
+  background: var(--surface-alt);
 }
 .checklist,
 .scorecard {
@@ -175,8 +179,8 @@ tbody tr:nth-child(even) {
 .checklist li,
 .scorecard li {
   padding: 0.65rem 0.75rem;
-  border: 1px solid #c4ccd3;
-  background: #f8fafb;
+  border: 1px solid var(--border);
+  background: var(--surface);
 }
 @media (max-width: 600px) {
   header {
@@ -196,4 +200,32 @@ tbody tr:nth-child(even) {
   .scorecard li {
     margin-bottom: 0.5rem;
   }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #f4f7fa;
+    --paper: #121820;
+    --accent: #8ab4ff;
+    --muted: #202a35;
+    --rule: #7d8b9b;
+    --border: #607083;
+    --surface: #1c2632;
+    --surface-alt: #18212b;
+    --secondary: #c2ccd7;
+    --success: #5ee58c;
+    --warning: #ffb86b;
+  }
+}
+[data-theme="dark"] {
+  --ink: #f4f7fa;
+  --paper: #121820;
+  --accent: #8ab4ff;
+  --muted: #202a35;
+  --rule: #7d8b9b;
+  --border: #607083;
+  --surface: #1c2632;
+  --surface-alt: #18212b;
+  --secondary: #c2ccd7;
+  --success: #5ee58c;
+  --warning: #ffb86b;
 }

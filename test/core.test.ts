@@ -73,11 +73,38 @@ describe("render", () => {
       expect(inspectHtml(html)).toMatchObject({ standalone: true, theme });
       expect(html).not.toMatch(/<script src=|<link[^>]+href=/);
     });
+  it("renders fragments, opt-in TOCs, and new semantic blocks", () => {
+    const x = structuredClone(doc);
+    x.metadata.toc = true;
+    x.metadata.theme = "presentation";
+    x.sections[0].blocks.push(
+      { type: "mermaid", code: "flowchart LR\nA-->B" },
+      {
+        type: "definition-list",
+        items: [{ term: "API", definition: "Interface" }],
+      },
+      {
+        type: "timeline",
+        events: [{ timestamp: "2026-01-01", title: "Start", text: "Began" }],
+      },
+      { type: "details", summary: "Evidence", markdown: "Hidden detail" },
+    );
+    expect(validateDocument(x)).toEqual([]);
+    const html = renderDocument(x, undefined, { fragment: true });
+    expect(html).toContain('<nav class="toc"');
+    expect(html).toContain('class="mermaid"');
+    expect(html).toContain('class="definitions"');
+    expect(html).not.toContain("<!doctype");
+    expect(html).not.toContain("<head>");
+  });
   it("renders keyboard-usable document navigation from semantic sections", () => {
     const html = renderDocument(doc, "technical-report");
     expect(html).toContain('<nav aria-label="Document sections">');
     expect(html).toContain('<a href="#overview">Overview</a>');
     expect(html).toContain('<main id="content">');
+    expect(html).toContain('class="theme-toggle"');
+    expect(html).toContain('data-document-theme="technical-report"');
+    expect(html).toContain("root.dataset.theme=dark()?'light':'dark'");
     expect(html).toContain(
       '<a class="skip-link" href="#content">Skip to content</a>',
     );
