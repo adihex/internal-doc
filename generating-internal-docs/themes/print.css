@@ -47,3 +47,68 @@ a {
     display: none;
   }
 }
+
+figure.diagram {
+  margin: 22px 0;
+  padding: 20px 18px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--surface, var(--paper));
+  overflow-x: auto;
+}
+figure.diagram svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
+}
+figure.diagram .diagram-title {
+  margin: 0 0 14px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+figure.diagram figcaption {
+  margin-top: 10px;
+  color: var(--secondary);
+  font-size: 12.5px;
+  text-align: center;
+}
+.mermaid-diagram {
+  margin-block: 4px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.mermaid-diagram svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
+}
+.svgtt {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.svgt {
+  font-size: 11px;
+  font-weight: 600;
+}
+.svgs {
+  font-size: 11px;
+  font-weight: 400;
+}
+.svgm {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10.5px;
+  font-weight: 400;
+}
+@media print {
+  figure.diagram,
+  .mermaid-diagram {
+    break-inside: avoid;
+    background: transparent;
+  }
+}

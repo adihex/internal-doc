@@ -47,7 +47,8 @@
             "technical-report",
             "status-report",
             "print",
-            "presentation"
+            "presentation",
+            "build-plan"
           ]
         },
         "toc": {
@@ -298,6 +299,31 @@
             },
             "text": {
               "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "svg"],
+          "properties": {
+            "type": {
+              "const": "diagram"
+            },
+            "id": {
+              "$ref": "#/$defs/id"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "svg": {
+              "type": "string",
+              "minLength": 1
+            },
+            "caption": {
+              "type": "string",
+              "minLength": 1
             }
           }
         },

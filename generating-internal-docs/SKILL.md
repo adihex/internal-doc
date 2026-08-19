@@ -28,6 +28,10 @@ When valid source already exists, use this deterministic local-only lane directl
 - `plain`: neutral guides and general-purpose documents.
 - `field-guide`: approachable procedures and handbooks.
 - `technical-report`: formal findings, decisions, and engineering reports.
+- `status-report`: dense updates and stand-up reports.
+- `print`: print-first pages with minimal chrome and page breaks.
+- `presentation`: large, screen-sharing friendly typography.
+- `build-plan`: phased implementation plans with entry gates, stages, and verification checklists.
 
 Read `references/themes.md` before changing visual presentation. Do not link remote CSS, JavaScript, fonts, or images.
 

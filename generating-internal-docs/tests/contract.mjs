@@ -19,7 +19,12 @@ function run(args) {
 }
 
 run(["validate", fixture]);
-for (const theme of ["plain", "field-guide", "technical-report"]) {
+for (const theme of [
+  "plain",
+  "field-guide",
+  "technical-report",
+  "build-plan",
+]) {
   const first = join(directory, `${theme}-a.html`);
   const second = join(directory, `${theme}-b.html`);
   run(["render", fixture, "--theme", theme, "--output", first]);
@@ -30,7 +35,12 @@ for (const theme of ["plain", "field-guide", "technical-report"]) {
   if (!inspection.standalone || inspection.theme !== theme)
     throw new Error(`${theme} contract failed`);
 }
-for (const theme of ["plain", "field-guide", "technical-report"]) {
+for (const theme of [
+  "plain",
+  "field-guide",
+  "technical-report",
+  "build-plan",
+]) {
   const first = join(directory, `${theme}-artifact-a.html`);
   const second = join(directory, `${theme}-artifact-b.html`);
   run(["render", fixture, "--theme", theme, "--artifact", "--output", first]);

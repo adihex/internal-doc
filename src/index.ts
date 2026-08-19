@@ -11,6 +11,7 @@ export const themes = [
   "status-report",
   "print",
   "presentation",
+  "build-plan",
 ] as const;
 export type Theme = (typeof themes)[number];
 export const themeDescriptions: Record<Theme, string> = {
@@ -20,6 +21,8 @@ export const themeDescriptions: Record<Theme, string> = {
   "status-report": "Dense updates and stand-up reports.",
   print: "Print-first pages with minimal chrome and page breaks.",
   presentation: "Large, screen-sharing friendly typography.",
+  "build-plan":
+    "Phased implementation plans with entry gates, stages, and verification checklists.",
 };
 type Obj = Record<string, unknown>;
 export type RenderMode = "standalone" | "artifact";
@@ -47,6 +50,93 @@ const md = new MarkdownIt({ html: false, linkify: false });
 md.validateLink = (url) =>
   !/^[a-z][a-z0-9+.-]*:/i.test(url) || /^(?:https?:|mailto:)/i.test(url);
 
+const SVG_TAGS = new Set([
+  "svg",
+  "g",
+  "defs",
+  "marker",
+  "path",
+  "rect",
+  "circle",
+  "ellipse",
+  "line",
+  "polyline",
+  "polygon",
+  "text",
+  "tspan",
+  "title",
+  "desc",
+  "use",
+  "symbol",
+  "linearGradient",
+  "radialGradient",
+  "stop",
+  "clipPath",
+]);
+const SVG_ATTRIBUTE =
+  /^(?:class|id|d|x|y|x1|y1|x2|y2|cx|cy|r|rx|ry|width|height|points|transform|viewBox|preserveAspectRatio|fill|fill-opacity|fill-rule|stroke|stroke-width|stroke-opacity|stroke-linecap|stroke-linejoin|stroke-dasharray|stroke-dashoffset|opacity|color|marker-start|marker-mid|marker-end|markerWidth|markerHeight|markerUnits|refX|refY|orient|offset|stop-color|stop-opacity|gradientUnits|gradientTransform|text-anchor|dominant-baseline|font-size|font-weight|font-family|letter-spacing|dx|dy|role|aria-label|aria-hidden|aria-labelledby|clip-path|clip-rule|xmlns|overflow|vector-effect|paint-order|shape-rendering|href)$/;
+const SVG_TAG =
+  /^<(\/?)([a-zA-Z][a-zA-Z0-9-]*)((?:\s+[a-zA-Z][a-zA-Z0-9-]*\s*=\s*"[^"<>]*")*)\s*(\/?)>/;
+export function svgDiagramErrors(svg: string): string[] {
+  const errors: string[] = [];
+  const source = svg.trim();
+  if (!/^<svg\b/.test(source) || !/<\/svg>$/.test(source))
+    return ["diagram svg must be a single <svg> … </svg> element"];
+  const open = source.match(/^<svg\b[^>]*>/)?.[0] ?? "";
+  if (!/\sviewBox\s*=\s*"[^"]+"/.test(open))
+    errors.push(
+      "diagram svg must declare a viewBox so the figure scales to its column",
+    );
+  if (!/\srole\s*=\s*"img"/.test(open))
+    errors.push('diagram svg must declare role="img"');
+  if (!/\saria-label\s*=\s*"[^"]+"/.test(open))
+    errors.push("diagram svg must declare a non-empty aria-label");
+  if (
+    /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/.test(
+      source.replace(/url\(\s*#[^)]*\)/g, ""),
+    )
+  )
+    errors.push(
+      "diagram svg must not contain hardcoded color literals (#rgb / #rrggbb): use currentColor with stroke-opacity or opacity for hierarchy, and var(--accent) / var(--accent-soft) for emphasis, so one diagram reads correctly in both light and dark",
+    );
+  let index = 0,
+    depth = 0;
+  while (index < source.length) {
+    const lt = source.indexOf("<", index);
+    if (lt === -1) break;
+    const tag = SVG_TAG.exec(source.slice(lt));
+    if (!tag) {
+      errors.push(
+        `diagram svg contains markup that is not a plain quoted-attribute SVG tag near ${JSON.stringify(source.slice(lt, lt + 48))}`,
+      );
+      break;
+    }
+    const [whole, closing = "", name = "", attributes = "", selfClosing = ""] =
+      tag;
+    if (!SVG_TAGS.has(name))
+      errors.push(`diagram svg contains an unsupported element: <${name}>`);
+    if (!closing)
+      for (const [, key, value] of attributes.matchAll(
+        /([a-zA-Z][a-zA-Z0-9-]*)\s*=\s*"([^"]*)"/g,
+      )) {
+        if (!SVG_ATTRIBUTE.test(key ?? ""))
+          errors.push(
+            `diagram svg contains an unsupported attribute: ${key} on <${name}>`,
+          );
+        if (key === "href" && !/^#[a-zA-Z][\w-]*$/.test(value ?? ""))
+          errors.push("diagram svg href must reference a local fragment");
+      }
+    depth += closing ? -1 : selfClosing ? 0 : 1;
+    if (depth < 0) {
+      errors.push("diagram svg has unbalanced tags");
+      break;
+    }
+    index = lt + whole.length;
+  }
+  if (depth !== 0 && !errors.includes("diagram svg has unbalanced tags"))
+    errors.push("diagram svg has unbalanced tags");
+  return [...new Set(errors)];
+}
 function locationFor(path: string, doc: Obj): string {
   const match = path.match(/^\/sections\/(\d+)(?:\/blocks\/(\d+))?(.*)$/);
   if (!match) return path || "/";
@@ -118,6 +208,9 @@ export function validateDocument(value: unknown, strict = false): string[] {
             }
           }
         }
+      if (b.type === "diagram" && typeof b.svg === "string")
+        for (const message of svgDiagramErrors(b.svg))
+          errors.push(`${where}: ${message}`);
       if (
         (b.type === "table" || b.type === "matrix") &&
         Array.isArray(b.columns)
@@ -175,9 +268,11 @@ function block(b: Obj, headings: Set<string>): string {
     case "checklist":
       return `<ul${id} class="${b.type}">${(b.items as Obj[]).map((x) => `<li><strong>${esc(x.label)}</strong>: ${esc(x.value)}${x.delta ? ` <span class="delta">${esc(x.delta)}</span>` : ""}${x.hint ? ` <small>${esc(x.hint)}</small>` : ""}</li>`).join("")}</ul>`;
     case "diagram":
+      if (typeof b.svg === "string")
+        return `<figure${id} class="diagram">${b.title ? `<p class="diagram-title">${esc(b.title)}</p>` : ""}${b.svg.trim()}${b.caption ? `<figcaption>${esc(b.caption)}</figcaption>` : ""}</figure>`;
       return `<pre${id} class="diagram" aria-label="Diagram">${esc(b.text)}</pre>`;
     case "mermaid":
-      return `<pre${id} class="mermaid">${esc(b.code)}</pre>`;
+      return `<div${id} class="mermaid-diagram"><pre class="mermaid">${esc(b.code)}</pre></div>`;
     case "definition-list":
       return `<dl${id} class="definitions">${(b.items as Obj[]).map((x) => `<dt>${esc(x.term)}</dt><dd>${esc(x.definition)}</dd>`).join("")}</dl>`;
     case "timeline":
@@ -190,7 +285,7 @@ function block(b: Obj, headings: Set<string>): string {
       throw new Error(`Unsupported block type: ${String(b.type)}`);
   }
 }
-const common = `*{box-sizing:border-box}html{scroll-behavior:smooth}body{overflow-wrap:break-word;background:var(--paper);color:var(--ink)}img,svg,video,canvas{max-width:100%}:focus-visible{outline:3px solid var(--accent);outline-offset:2px}.theme-toggle{position:absolute;top:1.5rem;right:0;padding:.45rem .7rem;border:1px solid var(--rule);border-radius:.25rem;background:var(--surface,var(--paper));color:var(--ink);font:inherit;cursor:pointer}.theme-toggle:hover{background:var(--muted)}.skip-link{position:absolute;left:.75rem;top:-5rem;z-index:10;padding:.75rem 1rem;background:var(--ink);color:var(--paper)}.skip-link:focus{top:.75rem}pre{overflow:auto;max-width:100%;padding:1rem;background:var(--muted)}.table-wrap{max-width:100%;overflow-x:auto}table{border-collapse:collapse;width:100%}th,td{border:1px solid var(--rule,#777);padding:.5rem;text-align:left}.align-center{text-align:center}.align-right{text-align:right}.callout,.task{padding:1rem;margin:1rem 0;background:var(--muted)}.section-link,.heading-link{opacity:0;margin-left:.4rem;color:var(--accent);text-decoration:none}.section-title:hover .section-link,.section-link:focus,.prose h2:hover .heading-link,.prose h3:hover .heading-link,.heading-link:focus{opacity:1}.toc{position:sticky;top:1rem;align-self:start}.toc ul{padding-left:1rem}@media(min-width:900px){.layout{display:grid;grid-template-columns:14rem minmax(0,1fr);gap:2rem}.toc details{display:block}.toc summary{display:none}}@media(max-width:899px){.toc{position:static}.toc ul{display:block}.toc>ul{display:none}}.definitions dt{font-weight:700}.definitions dd{margin:0 0 1rem}.timeline{border-left:2px solid var(--accent)}.timeline li{padding:0 0 1rem 1rem}.timeline time{display:block;color:var(--secondary,var(--ink))}.comparison{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:1rem}.comparison section{padding:1rem;background:var(--muted)}.caption,.delta{color:var(--secondary,var(--ink))}@media(max-width:600px){.theme-toggle{position:static;margin-bottom:1rem}}@media print{button,.skip-link,.toc,.section-link,.heading-link{display:none}body{max-width:none;padding:0;color:#000;background:#fff}a{color:#000}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}`;
+const common = `*{box-sizing:border-box}html{scroll-behavior:smooth}body{overflow-wrap:break-word;background:var(--paper);color:var(--ink)}img,svg,video,canvas{max-width:100%}:focus-visible{outline:3px solid var(--accent);outline-offset:2px}.theme-toggle{position:absolute;top:1.5rem;right:0;padding:.45rem .7rem;border:1px solid var(--rule);border-radius:.25rem;background:var(--surface,var(--paper));color:var(--ink);font:inherit;cursor:pointer}.theme-toggle:hover{background:var(--muted)}.skip-link{position:absolute;left:.75rem;top:-5rem;z-index:10;padding:.75rem 1rem;background:var(--ink);color:var(--paper)}.skip-link:focus{top:.75rem}pre{overflow:auto;max-width:100%;padding:1rem;background:var(--muted)}.table-wrap{max-width:100%;overflow-x:auto}table{border-collapse:collapse;width:100%}th,td{border:1px solid var(--rule,#777);padding:.5rem;text-align:left}.align-center{text-align:center}.align-right{text-align:right}.callout,.task{padding:1rem;margin:1rem 0;background:var(--muted)}.section-link,.heading-link{opacity:0;margin-left:.4rem;color:var(--accent);text-decoration:none}.section-title:hover .section-link,.section-link:focus,.prose h2:hover .heading-link,.prose h3:hover .heading-link,.heading-link:focus{opacity:1}.toc{position:sticky;top:1rem;align-self:start}.toc ul{padding-left:1rem}@media(min-width:900px){.layout.has-toc{display:grid;grid-template-columns:14rem minmax(0,1fr);gap:2rem}.toc details{display:block}.toc summary{display:none}}@media(max-width:899px){.toc{position:static}.toc ul{display:block}.toc>ul{display:none}}.definitions dt{font-weight:700}.definitions dd{margin:0 0 1rem}.timeline{border-left:2px solid var(--accent)}.timeline li{padding:0 0 1rem 1rem}.timeline time{display:block;color:var(--secondary,var(--ink))}.comparison{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:1rem}.comparison section{padding:1rem;background:var(--muted)}.caption,.delta{color:var(--secondary,var(--ink))}@media(max-width:600px){.theme-toggle{position:static;margin-bottom:1rem}}@media print{button,.skip-link,.toc,.section-link,.heading-link{display:none}body{max-width:none;padding:0;color:#000;background:#fff}a{color:#000}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}`;
 export function renderDocument(
   value: unknown,
   selectedTheme?: Theme,
@@ -232,7 +327,12 @@ export function renderDocument(
   }).replace(/</g, "\\u003c");
   const headerNavigation = `<nav aria-label="Document sections"><ul>${navigation}</ul></nav>`;
   if (mode === "artifact") {
-    const dark = ["plain", "field-guide", "technical-report"].includes(theme)
+    const dark = [
+      "plain",
+      "field-guide",
+      "technical-report",
+      "build-plan",
+    ].includes(theme)
       ? readFileSync(
           `${root}generating-internal-docs/themes/${theme}.dark.css`,
           "utf8",
@@ -241,11 +341,12 @@ export function renderDocument(
     const artifactCommon = `*{box-sizing:border-box}body{overflow-wrap:break-word;background:var(--paper);color:var(--ink)}img,svg,video,canvas{max-width:100%}:focus-visible{outline:3px solid var(--accent);outline-offset:2px}nav ul{display:flex;flex-wrap:wrap;gap:.5rem 1rem;padding:0;list-style:none}nav a{display:inline-block;padding:.25rem 0}pre{overflow-x:auto;max-width:100%;padding:1rem;background:var(--muted)}.code{max-width:100%}.table-wrap{max-width:100%;overflow-x:auto}table{border-collapse:collapse;width:100%}th,td,.scorecard,.checklist{font-variant-numeric:tabular-nums}th,td{border:1px solid var(--rule,#777);padding:.5rem;text-align:left}.callout,.task{padding:1rem;margin:1rem 0;background:var(--muted)}h1,h2,h3{text-wrap:balance}header{position:relative}.theme-toggle{position:absolute;top:.5rem;right:.5rem;padding:.35rem .6rem;border:1px solid var(--rule,#777);border-radius:.2rem;background:var(--muted);color:var(--ink);cursor:pointer;font-size:1rem;line-height:1}@media(max-width:600px){body{padding:1rem}nav ul{display:block}nav li+li{margin-top:.35rem}th,td{min-width:8rem}}@media print{button,.theme-toggle,nav{display:none}body{max-width:none;padding:0;color:#000;background:#fff}a{color:#000}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}`;
     return `<title>${esc(m.title)}</title><style>${themeCss}${dark}${artifactCommon}${accent}</style><header><button type="button" class="theme-toggle" aria-label="Toggle color theme">◐</button><h1>${esc(m.title)}</h1><p>${esc(m.summary)}</p><small>Version ${esc(m.version)} · ${esc(m.kind)}</small>${headerNavigation}</header><main id="content">${content}</main><script type="application/json" id="internal-doc-provenance">${provenance}</script><script>(()=>{const r=document.documentElement,b=document.querySelector('.theme-toggle');if(b)b.addEventListener('click',()=>{const c=r.getAttribute('data-theme'),d=matchMedia('(prefers-color-scheme: dark)').matches;r.setAttribute('data-theme',c==='dark'||(c!=='light'&&d)?'light':'dark')});document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>navigator.clipboard.writeText(b.parentElement.querySelector('code').textContent)))})()</script>`;
   }
-  const toc =
-    renderOptions.toc || m.toc === true
-      ? `<nav class="toc" aria-label="Table of contents"><details open><summary>Table of contents</summary><ul>${navigation}</ul></details></nav>`
-      : "";
-  const body = `<a class="skip-link" href="#content">Skip to content</a><header><button class="theme-toggle" type="button" aria-pressed="false">🌙 Dark mode</button><h1>${esc(m.title)}</h1><p>${esc(m.summary)}</p><small>Version ${esc(m.version)} · ${esc(m.kind)}</small>${headerNavigation}</header><div class="layout">${toc}<main id="content">${content}</main></div>`;
+  const hasToc = renderOptions.toc || m.toc === true;
+  const toc = hasToc
+    ? `<nav class="toc" aria-label="Table of contents"><details open><summary>Table of contents</summary><ul>${navigation}</ul></details></nav>`
+    : "";
+  const layoutClass = hasToc ? "layout has-toc" : "layout";
+  const body = `<a class="skip-link" href="#content">Skip to content</a><header><button class="theme-toggle" type="button" aria-pressed="false">🌙 Dark mode</button><h1>${esc(m.title)}</h1><p>${esc(m.summary)}</p><small>Version ${esc(m.version)} · ${esc(m.kind)}</small>${headerNavigation}</header><div class="${layoutClass}">${toc}<main id="content">${content}</main></div>`;
   if (renderOptions.fragment) return `<style>${css}</style>${body}`;
   return `<!doctype html><html lang="en" data-theme="${theme}" data-document-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="generator" content="internal-doc 1.0.0"><title>${esc(m.title)}</title><style>${css}</style></head><body>${body}<script type="application/json" id="internal-doc-provenance">${provenance}</script><script>(()=>{const root=document.documentElement,button=document.querySelector('.theme-toggle'),media=matchMedia('(prefers-color-scheme: dark)'),dark=()=>root.dataset.theme==='dark'||(root.dataset.theme!=='light'&&media.matches),sync=()=>{const active=dark();button.textContent=active?'☀️ Light mode':'🌙 Dark mode';button.setAttribute('aria-pressed',String(active))};button.addEventListener('click',()=>{root.dataset.theme=dark()?'light':'dark';sync()});media.addEventListener?.('change',sync);sync();document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>{const t=b.parentElement.querySelector('code').textContent;if(navigator.clipboard)navigator.clipboard.writeText(t);else{const x=document.createElement('textarea');x.value=t;document.body.append(x);x.select();document.execCommand('copy');x.remove()}}))})()</script></body></html>`;
 }

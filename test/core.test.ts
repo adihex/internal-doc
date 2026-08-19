@@ -67,7 +67,12 @@ describe("validation", () => {
   });
 });
 describe("render", () => {
-  for (const theme of ["plain", "field-guide", "technical-report"] as const)
+  for (const theme of [
+    "plain",
+    "field-guide",
+    "technical-report",
+    "build-plan",
+  ] as const)
     it(`renders ${theme}`, () => {
       const html = renderDocument(doc, theme);
       expect(inspectHtml(html)).toMatchObject({ standalone: true, theme });
@@ -96,6 +101,17 @@ describe("render", () => {
     expect(html).toContain('class="definitions"');
     expect(html).not.toContain("<!doctype");
     expect(html).not.toContain("<head>");
+  });
+  it("uses a two-column layout only when a table of contents is rendered", () => {
+    expect(renderDocument(doc, "plain")).toContain('<div class="layout">');
+    expect(renderDocument(doc, "plain")).not.toContain(
+      '<div class="layout has-toc">',
+    );
+    const x = structuredClone(doc);
+    x.metadata.toc = true;
+    expect(renderDocument(x, "plain")).toContain(
+      '<div class="layout has-toc">',
+    );
   });
   it("renders keyboard-usable document navigation from semantic sections", () => {
     const html = renderDocument(doc, "technical-report");
@@ -156,7 +172,12 @@ describe("render", () => {
     ).toBe(false);
   });
   it("includes overflow safeguards and theme-owned print contracts", () => {
-    for (const theme of ["plain", "field-guide", "technical-report"] as const) {
+    for (const theme of [
+      "plain",
+      "field-guide",
+      "technical-report",
+      "build-plan",
+    ] as const) {
       const html = renderDocument(doc, theme);
       expect(html).toMatch(/overflow-wrap:break-word/);
       expect(html).toMatch(/@media print/);
@@ -164,8 +185,111 @@ describe("render", () => {
     }
   });
 });
+describe("svg diagram blocks", () => {
+  const svg = (extra = "") =>
+    `<svg viewBox="0 0 100 40" role="img" aria-label="Flow"${extra}><rect x="1" y="1" width="30" height="20" fill="none" stroke="currentColor"/></svg>`;
+  const withDiagram = (block: Record<string, unknown>) => {
+    const x = structuredClone(doc);
+    x.sections[0].blocks.push(block);
+    return validateDocument(x).join("\n");
+  };
+  it("accepts a theme-aware inline svg diagram", () => {
+    expect(withDiagram({ type: "diagram", svg: svg() })).toBe("");
+  });
+  it("rejects hardcoded color literals inside diagram svg", () => {
+    const bad = svg().replace('stroke="currentColor"', 'stroke="#ff0000"');
+    expect(withDiagram({ type: "diagram", svg: bad })).toMatch(
+      /hardcoded color literals/,
+    );
+  });
+  it("requires viewBox, role and aria-label", () => {
+    expect(
+      withDiagram({
+        type: "diagram",
+        svg: '<svg role="img" aria-label="Flow"><rect x="1" y="1" width="2" height="2"/></svg>',
+      }),
+    ).toMatch(/viewBox/);
+    expect(
+      withDiagram({
+        type: "diagram",
+        svg: '<svg viewBox="0 0 4 4"><rect x="1" y="1" width="2" height="2"/></svg>',
+      }),
+    ).toMatch(/role="img"/);
+    expect(
+      withDiagram({
+        type: "diagram",
+        svg: '<svg viewBox="0 0 4 4" role="img"><rect x="1" y="1" width="2" height="2"/></svg>',
+      }),
+    ).toMatch(/aria-label/);
+  });
+  it("rejects scripting, unsupported elements and event handlers", () => {
+    expect(
+      withDiagram({
+        type: "diagram",
+        svg: svg().replace("<rect", "<script>bad()</script><rect"),
+      }),
+    ).toMatch(/unsupported element/);
+    expect(
+      withDiagram({
+        type: "diagram",
+        svg: svg().replace("<rect", '<rect onclick="bad()"'),
+      }),
+    ).toMatch(/unsupported attribute/);
+    expect(
+      withDiagram({
+        type: "diagram",
+        svg: svg().replace(
+          "<rect",
+          '<image href="https://evil.test/x.png"/><rect',
+        ),
+      }),
+    ).toMatch(/unsupported element/);
+  });
+  it("renders a figure with an accessible svg, optional title and caption", () => {
+    const x = structuredClone(doc);
+    x.sections[0].blocks.push({
+      type: "diagram",
+      svg: svg(),
+      title: "Figure B",
+      caption: "One stage.",
+    });
+    const html = renderDocument(x, "build-plan");
+    expect(html).toContain('<figure class="diagram">');
+    expect(html).toContain('<p class="diagram-title">Figure B</p>');
+    expect(html).toContain("<figcaption>One stage.</figcaption>");
+    expect(html).toContain('role="img"');
+    expect(inspectHtml(html).standalone).toBe(true);
+  });
+  it("keeps the text diagram shape working alongside the svg shape", () => {
+    expect(renderDocument(doc, "plain")).toContain('<pre class="diagram"');
+  });
+  it("wraps mermaid in a scrollable container in every theme", () => {
+    for (const theme of [
+      "plain",
+      "field-guide",
+      "technical-report",
+      "status-report",
+      "print",
+      "presentation",
+      "build-plan",
+    ] as const) {
+      const html = renderDocument(doc, theme);
+      expect(html).toContain(
+        '<div class="mermaid-diagram"><pre class="mermaid">',
+      );
+      expect(html).toContain("figure.diagram");
+      expect(html).toContain(".mermaid-diagram");
+      expect(html).toContain(".svgtt");
+    }
+  });
+});
 describe("artifact mode", () => {
-  for (const theme of ["plain", "field-guide", "technical-report"] as const)
+  for (const theme of [
+    "plain",
+    "field-guide",
+    "technical-report",
+    "build-plan",
+  ] as const)
     it(`renders ${theme} as artifact-fragment`, () => {
       const html = renderDocument(doc, theme, "artifact");
       expect(inspectHtml(html)).toMatchObject({
@@ -179,14 +303,24 @@ describe("artifact mode", () => {
       expect(html).not.toMatch(/<script src=|<link[^>]+href=/);
     });
   it("is deterministic across two renders for every theme", () => {
-    for (const theme of ["plain", "field-guide", "technical-report"] as const) {
+    for (const theme of [
+      "plain",
+      "field-guide",
+      "technical-report",
+      "build-plan",
+    ] as const) {
       const a = renderDocument(doc, theme, "artifact");
       const b = renderDocument(doc, theme, "artifact");
       expect(a).toBe(b);
     }
   });
   it("contains dual-theme custom properties with manual toggle override", () => {
-    for (const theme of ["plain", "field-guide", "technical-report"] as const) {
+    for (const theme of [
+      "plain",
+      "field-guide",
+      "technical-report",
+      "build-plan",
+    ] as const) {
       const html = renderDocument(doc, theme, "artifact");
       expect(html).toContain("@media (prefers-color-scheme: dark)");
       expect(html).toContain(':root[data-theme="light"]');

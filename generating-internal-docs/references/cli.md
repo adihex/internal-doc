@@ -11,7 +11,7 @@ Successful command output goes to stdout. Diagnostics go to stderr. Exit 0 means
 
 ## render
 
-`--theme <plain|field-guide|technical-report>` selects the visual theme (defaults to `plain`). `--output <path>` is required and sets the destination file. `--artifact` switches the output from a standalone HTML page to an artifact fragment — a dual-theme, responsive HTML fragment with no `<!doctype>`, `<html>`, `<head>`, or `<body>` wrapper, designed for publishing directly as a claude.ai Artifact with zero hand-editing. `--artifact` is valid only for `render` and rejected elsewhere.
+`--theme <plain|field-guide|technical-report|status-report|print|presentation|build-plan>` selects the visual theme (defaults to `plain`). `--output <path>` is required and sets the destination file. `--artifact` switches the output from a standalone HTML page to an artifact fragment — a dual-theme, responsive HTML fragment with no `<!doctype>`, `<html>`, `<head>`, or `<body>` wrapper, designed for publishing directly as a claude.ai Artifact with zero hand-editing. `--artifact` is valid only for `render` and rejected elsewhere.
 
 ## inspect
 

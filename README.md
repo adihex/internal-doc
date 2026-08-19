@@ -29,7 +29,7 @@ Install the published Amp skill with `amp skill add --global @adihex/generating-
 
 ## Schema and theme extension
 
-`internal-doc.document.v1` is the canonical compiler boundary. Add a block only by extending the JSON Schema, typed renderer switch, validation, every-block fixture, escaping tests, and all-theme render tests together. Themes are trusted packaged CSS selected from the validated `plain`, `field-guide`, or `technical-report` registry; document input cannot provide CSS, templates, render commands, or shell strings.
+`internal-doc.document.v1` is the canonical compiler boundary. Add a block only by extending the JSON Schema, typed renderer switch, validation, every-block fixture, escaping tests, and all-theme render tests together. Themes are trusted packaged CSS selected from the validated `plain`, `field-guide`, `technical-report`, `status-report`, `print`, `presentation`, or `build-plan` registry; document input cannot provide CSS, templates, render commands, or shell strings.
 
 ## Safety and limitations
 
