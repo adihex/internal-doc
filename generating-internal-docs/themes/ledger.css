@@ -1,0 +1,278 @@
+:root {
+  --print-theme: ledger;
+  --ink: #15181c;
+  --paper: #fcfbf9;
+  --accent: #0e5c48;
+  --muted: #efede9;
+  --rule: #b9b5ac;
+  --border: #ded9d1;
+  --surface: #ffffff;
+  --surface-alt: #f7f4f0;
+  --secondary: #545c68;
+  --success: #0e5c48;
+  --warning: #8a6011;
+}
+@media print {
+  body {
+    font-size: 10pt;
+  }
+  section {
+    break-before: page;
+  }
+  section:first-child {
+    break-before: auto;
+  }
+  pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .table-wrap {
+    overflow: visible;
+  }
+  header {
+    border-top-color: #000;
+  }
+}
+body {
+  margin: auto;
+  max-width: 76rem;
+  padding: 2rem;
+  color: var(--ink);
+  background: var(--paper);
+  font:
+    15px/1.55 system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}
+header {
+  padding: 1.5rem 0 1rem;
+  border-top: 0.5rem solid var(--ink);
+  border-bottom: 1px solid var(--rule);
+}
+header > p {
+  max-width: 72ch;
+  margin: 0.5rem 0;
+  font-size: 1.08rem;
+}
+header small,
+.caption,
+.delta {
+  color: var(--secondary);
+}
+header small {
+  font:
+    0.8rem ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+nav {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--muted);
+}
+main {
+  display: grid;
+  gap: 1.25rem;
+}
+section {
+  min-width: 0;
+  padding-top: 0.75rem;
+}
+a {
+  color: var(--accent);
+  text-underline-offset: 0.16em;
+}
+h1,
+h2,
+h3 {
+  font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+}
+h1 {
+  margin: 0;
+  border-bottom: 3px solid var(--ink);
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  line-height: 1.05;
+}
+h2 {
+  margin: 1rem 0;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: clamp(1.35rem, 3vw, 1.8rem);
+  line-height: 1.2;
+}
+h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1.08rem;
+}
+code,
+pre,
+.scorecard,
+.checklist,
+table,
+figure {
+  font-variant-numeric: tabular-nums;
+}
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92em;
+}
+.code {
+  position: relative;
+  margin: 1rem 0;
+}
+.code pre,
+.diagram {
+  border: 1px solid var(--border);
+  border-radius: 0;
+  line-height: 1.45;
+}
+.copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  color: var(--ink);
+  background: var(--paper);
+  cursor: pointer;
+}
+.callout,
+.task {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface-alt);
+}
+.callout {
+  border-left: 0;
+}
+.callout.warning {
+  border-color: var(--warning);
+}
+.callout.success {
+  border-color: var(--success);
+}
+.callout > strong {
+  margin-right: 0.35rem;
+  text-transform: uppercase;
+}
+.task {
+  border-left: 0;
+}
+.task dl {
+  display: grid;
+  grid-template-columns: minmax(5rem, auto) 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+}
+.task dt {
+  font-weight: 700;
+}
+.task dd {
+  margin: 0;
+}
+.table-wrap {
+  margin: 1rem 0;
+  border: 1px solid var(--rule);
+}
+table {
+  font-size: 0.94rem;
+}
+thead {
+  color: var(--paper);
+  background: var(--ink);
+}
+tbody tr {
+  border-bottom: 1px solid var(--rule);
+}
+tbody tr:nth-child(even) {
+  background: var(--surface-alt);
+}
+th,
+td {
+  text-align: right;
+}
+th:first-child,
+td:first-child {
+  text-align: left;
+}
+.checklist,
+.scorecard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+.checklist li,
+.scorecard li {
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface);
+}
+@media (max-width: 600px) {
+  header {
+    padding-top: 1rem;
+  }
+  .task dl {
+    display: block;
+  }
+  .task dd {
+    margin-bottom: 0.5rem;
+  }
+  .checklist,
+  .scorecard {
+    display: block;
+  }
+  .checklist li,
+  .scorecard li {
+    margin-bottom: 0.5rem;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #e9ebee;
+    --paper: #131518;
+    --accent: #4fbf9f;
+    --muted: #22262b;
+    --rule: #4a515a;
+    --border: #2f343a;
+    --surface: #1a1d21;
+    --surface-alt: #1e2126;
+    --secondary: #99a1ac;
+    --success: #4fbf9f;
+    --warning: #dcaf5e;
+  }
+}
+[data-theme="dark"] {
+  --ink: #e9ebee;
+  --paper: #131518;
+  --accent: #4fbf9f;
+  --muted: #22262b;
+  --rule: #4a515a;
+  --border: #2f343a;
+  --surface: #1a1d21;
+  --surface-alt: #1e2126;
+  --secondary: #99a1ac;
+  --success: #4fbf9f;
+  --warning: #dcaf5e;
+}
+figure.diagram,
+.mermaid-diagram {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.svgtt {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
