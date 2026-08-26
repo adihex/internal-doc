@@ -32,6 +32,7 @@ When valid source already exists, use this deterministic local-only lane directl
 - `print`: print-first pages with minimal chrome and page breaks.
 - `presentation`: large, screen-sharing friendly typography.
 - `build-plan`: phased implementation plans with entry gates, stages, and verification checklists.
+- `ledger`: financial findings and audit results with statement rules and tabular figures.
 
 Read `references/themes.md` before changing visual presentation. Do not link remote CSS, JavaScript, fonts, or images.
 

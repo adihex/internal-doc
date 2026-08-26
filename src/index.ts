@@ -12,6 +12,7 @@ export const themes = [
   "print",
   "presentation",
   "build-plan",
+  "ledger",
 ] as const;
 export type Theme = (typeof themes)[number];
 export const themeDescriptions: Record<Theme, string> = {
@@ -23,6 +24,8 @@ export const themeDescriptions: Record<Theme, string> = {
   presentation: "Large, screen-sharing friendly typography.",
   "build-plan":
     "Phased implementation plans with entry gates, stages, and verification checklists.",
+  ledger:
+    "Financial findings and audit results with statement rules and tabular figures.",
 };
 type Obj = Record<string, unknown>;
 export type RenderMode = "standalone" | "artifact";
@@ -333,6 +336,7 @@ export function renderDocument(
       "field-guide",
       "technical-report",
       "build-plan",
+      "ledger",
     ].includes(theme)
       ? readFileSync(
           `${root}generating-internal-docs/themes/${theme}.dark.css`,
@@ -346,7 +350,7 @@ export function renderDocument(
     renderOptions.toc || m.toc === true
       ? `<nav class="toc" aria-label="Table of contents"><details open><summary>Table of contents</summary><ul>${navigation}</ul></details></nav>`
       : "";
-  const layoutClass = toc ? "layout" : "layout layout-no-toc";
+  const layoutClass = toc ? "layout has-toc" : "layout layout-no-toc";
   const body = `<a class="skip-link" href="#content">Skip to content</a><header><button class="theme-toggle" type="button" aria-pressed="false">🌙 Dark mode</button><h1>${esc(m.title)}</h1><p>${esc(m.summary)}</p><small>Version ${esc(m.version)} · ${esc(m.kind)}</small>${headerNavigation}</header><div class="${layoutClass}">${toc}<main id="content">${content}</main></div>`;
   if (renderOptions.fragment) return `<style>${css}</style>${body}`;
   return `<!doctype html><html lang="en" data-theme="${theme}" data-document-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="generator" content="internal-doc 1.0.0"><title>${esc(m.title)}</title><style>${css}</style></head><body>${body}<script type="application/json" id="internal-doc-provenance">${provenance}</script><script>(()=>{const root=document.documentElement,button=document.querySelector('.theme-toggle'),media=matchMedia('(prefers-color-scheme: dark)'),dark=()=>root.dataset.theme==='dark'||(root.dataset.theme!=='light'&&media.matches),sync=()=>{const active=dark();button.textContent=active?'☀️ Light mode':'🌙 Dark mode';button.setAttribute('aria-pressed',String(active))};button.addEventListener('click',()=>{root.dataset.theme=dark()?'light':'dark';sync()});media.addEventListener?.('change',sync);sync();document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>{const t=b.parentElement.querySelector('code').textContent;if(navigator.clipboard)navigator.clipboard.writeText(t);else{const x=document.createElement('textarea');x.value=t;document.body.append(x);x.select();document.execCommand('copy');x.remove()}}))})()</script></body></html>`;

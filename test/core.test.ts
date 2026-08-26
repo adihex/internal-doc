@@ -72,6 +72,7 @@ describe("render", () => {
     "field-guide",
     "technical-report",
     "build-plan",
+    "ledger",
   ] as const)
     it(`renders ${theme}`, () => {
       const html = renderDocument(doc, theme);
@@ -103,7 +104,9 @@ describe("render", () => {
     expect(html).not.toContain("<head>");
   });
   it("uses a two-column layout only when a table of contents is rendered", () => {
-    expect(renderDocument(doc, "plain")).toContain('<div class="layout">');
+    expect(renderDocument(doc, "plain")).toContain(
+      '<div class="layout layout-no-toc">',
+    );
     expect(renderDocument(doc, "plain")).not.toContain(
       '<div class="layout has-toc">',
     );
@@ -200,6 +203,7 @@ describe("render", () => {
       "field-guide",
       "technical-report",
       "build-plan",
+      "ledger",
     ] as const) {
       const html = renderDocument(doc, theme);
       expect(html).toMatch(/overflow-wrap:break-word/);
@@ -295,6 +299,7 @@ describe("svg diagram blocks", () => {
       "print",
       "presentation",
       "build-plan",
+      "ledger",
     ] as const) {
       const html = renderDocument(doc, theme);
       expect(html).toContain(
@@ -312,6 +317,7 @@ describe("artifact mode", () => {
     "field-guide",
     "technical-report",
     "build-plan",
+    "ledger",
   ] as const)
     it(`renders ${theme} as artifact-fragment`, () => {
       const html = renderDocument(doc, theme, "artifact");
@@ -331,6 +337,7 @@ describe("artifact mode", () => {
       "field-guide",
       "technical-report",
       "build-plan",
+      "ledger",
     ] as const) {
       const a = renderDocument(doc, theme, "artifact");
       const b = renderDocument(doc, theme, "artifact");
@@ -343,6 +350,7 @@ describe("artifact mode", () => {
       "field-guide",
       "technical-report",
       "build-plan",
+      "ledger",
     ] as const) {
       const html = renderDocument(doc, theme, "artifact");
       expect(html).toContain("@media (prefers-color-scheme: dark)");
